@@ -77,6 +77,21 @@ It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.ht
 
 Note that anyone with the link can read it, so treat it like a public document.
 
+## The live auction board
+
+The shared booklet's tracker is per-device: each person's marks stay on their own phone. That's right for a booklet, wrong for the auction itself, where everyone should be looking at the same numbers.
+
+**Download live auction board** produces a second HTML file for auction day: one board where the organiser records each result — sold, unsold, which team, what price — and every other viewer watches the purses count down. Team chips instead of dropdowns, big touch targets, and a search that filters *your* view without touching anyone else's.
+
+Opened as a plain file it works fine, just for you alone; the badge in the corner says **Local only · not shared**. To make it genuinely shared, publish it as a Claude Artifact with the `artifact` capability — ask Claude to "publish this as an artifact with the artifact capability". Then:
+
+- The **owner and editors** record results; their clicks are saved as them.
+- **Everyone else** gets a read-only view that still updates live. The badge tells each viewer which one they are.
+
+There's no server and no database. On a Claude live-doc artifact the page's markup *is* the shared document, so a click that changes the DOM is the edit. That constraint shapes the file: every row is served as HTML rather than rendered by script, state lives in `data-*` attributes on the row, team choice is buttons rather than a `<select>` (select values aren't captured), and anything computed — purse totals, search, filters — sits inside `<artifact-local>` so it stays yours.
+
+A demo built from the sample data: <https://claude.ai/code/artifact/14779b37-687c-470c-8a2a-c140dd4dcbae>
+
 ### Reopening a booklet later
 
 **Save project** writes a `.auctionbook.json` holding your data, column mapping, settings and photos. **Open project** restores all of it. Handy when the player list changes the night before.
@@ -127,6 +142,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/mapping.js` | Guesses what each column means |
 | `assets/js/render.js` | Rows + settings → booklet HTML |
 | `assets/js/export.js` | Builds the self-contained shareable file |
+| `assets/js/liveboard.js` | Builds the live auction board |
 | `assets/js/main.js` | Wires up the UI |
 | `assets/css/booklet.css` | The booklet's print design — also inlined into the export |
 

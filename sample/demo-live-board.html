@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riverside Premier League Live Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root{
+  --ground:#eef0f5; --surface:#fff; --surface-2:#f7f8fb;
+  --ink:#151922; --ink-2:#535c6f; --ink-3:#8b93a5;
+  --line:#dce0ea; --line-2:#c6ccdb;
+  --accent:#a35d05; --accent-soft:#fdf1dd;
+  --sold:#0d6b46; --sold-soft:#dff3e9;
+  --unsold:#9c3322; --unsold-soft:#fbe6e1;
+  --focus:#2563eb;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#10131a; --surface:#181c25; --surface-2:#1f242f;
+    --ink:#eef1f7; --ink-2:#a4adc0; --ink-3:#7b8496;
+    --line:#282e3a; --line-2:#39414f;
+    --accent:#f0a92e; --accent-soft:#2e2416;
+    --sold:#3ecb90; --sold-soft:#12301f;
+    --unsold:#f2836b; --unsold-soft:#341c19;
+    --focus:#6ea0ff;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#10131a; --surface:#181c25; --surface-2:#1f242f;
+  --ink:#eef1f7; --ink-2:#a4adc0; --ink-3:#7b8496;
+  --line:#282e3a; --line-2:#39414f;
+  --accent:#f0a92e; --accent-soft:#2e2416;
+  --sold:#3ecb90; --sold-soft:#12301f;
+  --unsold:#f2836b; --unsold-soft:#341c19;
+  --focus:#6ea0ff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:16px/1.45 "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,.lot,.tm,.res,.rail b,th{font-family:Oswald, "Arial Narrow", Impact, sans-serif}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+
+.head{
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  padding:14px 20px; background:var(--surface); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:20;
+}
+.head h1{margin:0; font-size:23px; font-weight:600; letter-spacing:.02em; text-transform:uppercase}
+.head p{margin:1px 0 0; font-size:13.5px; color:var(--ink-3)}
+.mode{
+  font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  padding:5px 12px; border-radius:999px; border:1px solid var(--line-2); color:var(--ink-2);
+  display:flex; align-items:center; gap:7px; white-space:nowrap;
+}
+.mode::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--ink-3)}
+.mode[data-state="live"]{color:var(--sold); border-color:var(--sold); background:var(--sold-soft)}
+.mode[data-state="live"]::before{background:var(--sold)}
+.mode[data-state="readonly"]{color:var(--accent); border-color:var(--accent); background:var(--accent-soft)}
+.mode[data-state="readonly"]::before{background:var(--accent)}
+.mode[data-state="local"]{color:var(--ink-2)}
+
+.rail{
+  display:flex; gap:10px; overflow-x:auto; padding:12px 20px;
+  background:var(--surface-2); border-bottom:1px solid var(--line); scrollbar-width:thin;
+}
+.purse{
+  flex:0 0 auto; min-width:168px; background:var(--surface);
+  border:1px solid var(--line); border-left:4px solid var(--accent);
+  border-radius:8px; padding:9px 12px;
+}
+.purse .n{font-size:13px; font-weight:700; letter-spacing:.02em}
+.purse .c{font-size:11.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em}
+.purse b{display:block; font-size:21px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums; letter-spacing:.01em}
+.purse[data-over="1"] b{color:var(--unsold)}
+.purse.tally{border-left-color:var(--ink-3)}
+
+.tools{display:flex; gap:10px; padding:12px 20px; flex-wrap:wrap; align-items:center}
+#q{
+  flex:1 1 240px; min-width:0; font:inherit; font-size:15px; padding:9px 13px;
+  border:1px solid var(--line-2); border-radius:9px; background:var(--surface); color:var(--ink);
+}
+.filters{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.chip{
+  font:inherit; font-size:13.5px; font-weight:600; padding:6px 13px; border-radius:999px;
+  border:1px solid var(--line-2); background:var(--surface); color:var(--ink-2); cursor:pointer;
+}
+.chip:hover{border-color:var(--ink-3)}
+.chip.on{background:var(--ink); border-color:var(--ink); color:var(--ground)}
+.sep{width:1px; height:20px; background:var(--line-2); margin:0 3px}
+
+main{padding:0 20px 40px}
+.ledger{width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:10px}
+.ledger th{
+  text-align:left; font-size:11.5px; font-weight:500; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); padding:9px 12px; border-bottom:1px solid var(--line-2); white-space:nowrap;
+}
+.ledger td{padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:middle}
+.ledger tr:last-child td{border-bottom:0}
+/* data-local-* never leaves this view, so one person's search does not
+   hide rows for everyone else. A plain [hidden] would. */
+.ledger tr[data-local-hidden]{display:none}
+
+.c-lot{width:52px}
+.lot{
+  display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:26px;
+  padding:0 6px; border-radius:6px; background:var(--surface-2); border:1px solid var(--line);
+  font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink-2);
+}
+.who{display:flex; align-items:center; gap:11px; min-width:0}
+.avatar{
+  width:38px; height:38px; flex:0 0 38px; border-radius:8px; overflow:hidden;
+  background:var(--accent-soft); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;
+}
+.avatar img{width:100%; height:100%; object-fit:cover}
+.who-t{display:flex; flex-direction:column; min-width:0}
+.nm{font-size:16.5px; font-weight:600; line-height:1.2}
+.sub{font-size:12.5px; color:var(--ink-3)}
+.st{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.c-base{white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--ink-2); font-weight:600}
+
+.c-act{width:196px; white-space:nowrap}
+.res{
+  font:inherit; font-size:13px; font-weight:500; letter-spacing:.05em; text-transform:uppercase;
+  padding:7px 12px; border-radius:7px; border:1px solid var(--line-2);
+  background:var(--surface); color:var(--ink-2); cursor:pointer; margin-right:5px;
+}
+.res:hover{border-color:var(--ink-3)}
+tr[data-status="sold"] .res.sold{background:var(--sold); border-color:var(--sold); color:#fff}
+tr[data-status="unsold"] .res.unsold{background:var(--unsold); border-color:var(--unsold); color:#fff}
+tr[data-status="sold"]{background:var(--sold-soft)}
+tr[data-status="unsold"]{background:var(--unsold-soft); color:var(--ink-2)}
+tr[data-status="unsold"] .avatar{opacity:.5}
+
+.c-team{width:1%}
+.teamrow{display:flex; gap:4px}
+.tm{
+  font:inherit; font-size:12.5px; font-weight:600; letter-spacing:.04em; min-width:38px;
+  padding:6px 8px; border-radius:7px; border:1px solid var(--line-2);
+  background:var(--surface); color:var(--ink-3); cursor:pointer;
+}
+.tm:hover{border-color:var(--ink-3); color:var(--ink-2)}
+.tm[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
+:root:not([data-theme="light"]) .tm[aria-pressed="true"]{color:#241a08}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .tm[aria-pressed="true"]{color:#fff}}
+
+.c-price{width:118px}
+.pz{
+  width:100%; font:inherit; font-size:15px; font-weight:600; font-variant-numeric:tabular-nums;
+  padding:7px 10px; border:1px solid var(--line-2); border-radius:7px;
+  background:var(--surface-2); color:var(--ink); text-align:right;
+}
+.pz::placeholder{color:var(--ink-3); font-weight:400}
+
+.foot{
+  display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  padding:16px 20px 40px; font-size:12.5px; color:var(--ink-3);
+}
+
+/* When this view cannot write, the runtime marks the sync region off. */
+[artifact-sync-state="off"] .res,
+[artifact-sync-state="off"] .tm,
+[artifact-sync-state="off"] .pz{opacity:.55; pointer-events:none}
+
+@media (max-width:860px){
+  .ledger thead{display:none}
+  .ledger, .ledger tbody, .ledger tr, .ledger td{display:block; width:auto}
+  .ledger{border:0; background:none}
+  .ledger tr{
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    margin-bottom:10px; padding:10px 12px; display:grid;
+    grid-template-columns:auto 1fr; gap:8px 12px; align-items:center;
+  }
+  .ledger td{border:0; padding:0}
+  .c-lot{grid-row:1; grid-column:1}
+  .who{grid-row:1; grid-column:2}
+  .c-base{grid-row:2; grid-column:1/-1; font-size:13px}
+  .c-act{grid-row:3; grid-column:1/-1; width:auto; display:flex; gap:6px}
+  .res{flex:1; margin:0}
+  .c-team{grid-row:4; grid-column:1/-1; width:auto}
+  .teamrow{flex-wrap:wrap}
+  .tm{flex:1 0 auto}
+  .c-price{grid-row:5; grid-column:1/-1; width:auto}
+  .head{position:static}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="head">
+  <div class="head-id">
+    <h1>Riverside Premier League</h1>
+    <p>Season 4 · Sunday 14 March · Riverside Ground</p>
+  </div>
+  <artifact-local><div class="mode" id="mode" data-state="checking">Connecting…</div></artifact-local>
+</header>
+
+<artifact-local>
+  <section class="rail" id="rail" aria-label="Team purses"></section>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Search players, teams, stats…" autocomplete="off">
+    <div class="filters" id="filters">
+      <button class="chip on" data-cat="">All</button>
+      <button class="chip" data-cat="Marquee">Marquee</button><button class="chip" data-cat="Batter">Batter</button><button class="chip" data-cat="Bowler">Bowler</button><button class="chip" data-cat="All-rounder">All-rounder</button><button class="chip" data-cat="Wicket-keeper">Wicket-keeper</button>
+      <span class="sep"></span>
+      <button class="chip" data-only="open">Not yet called</button>
+    </div>
+  </div>
+</artifact-local>
+
+<main>
+<table class="ledger">
+  <thead><tr>
+    <th class="c-lot">Lot</th>
+    <th>Player</th>
+    <th class="c-base">Base</th>
+    <th class="c-act">Result</th>
+    <th class="c-team">Team</th>
+    <th class="c-price">Price</th>
+  </tr></thead>
+  <tbody id="rows">
+    <tr data-lot="1" data-key="1" data-status="" data-team=""
+        data-search="arjun menon marquee marquee · 29 · kochi · right-hand bat matches 84 · runs 2412 · wickets 6" data-cat="Marquee">
+      <td class="c-lot"><span class="lot">1</span></td>
+      <td class="who">
+        <span class="avatar">AM</span>
+        <span class="who-t"><span class="nm">Arjun Menon</span><span class="sub">Marquee · 29 · Kochi · Right-hand bat</span>
+        <span class="st">Matches 84 · Runs 2412 · Wickets 6</span></span>
+      </td>
+      <td class="c-base">₹50,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Arjun Menon"></td>
+    </tr>
+    <tr data-lot="2" data-key="2" data-status="" data-team=""
+        data-search="vikram rathore marquee marquee · 31 · indore · right-arm fast matches 91 · runs 640 · wickets 118" data-cat="Marquee">
+      <td class="c-lot"><span class="lot">2</span></td>
+      <td class="who">
+        <span class="avatar">VR</span>
+        <span class="who-t"><span class="nm">Vikram Rathore</span><span class="sub">Marquee · 31 · Indore · Right-arm fast</span>
+        <span class="st">Matches 91 · Runs 640 · Wickets 118</span></span>
+      </td>
+      <td class="c-base">₹50,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Vikram Rathore"></td>
+    </tr>
+    <tr data-lot="3" data-key="3" data-status="" data-team=""
+        data-search="sana iqbal marquee marquee · 26 · hyderabad · left-hand bat matches 72 · runs 2088 · wickets 14" data-cat="Marquee">
+      <td class="c-lot"><span class="lot">3</span></td>
+      <td class="who">
+        <span class="avatar">SI</span>
+        <span class="who-t"><span class="nm">Sana Iqbal</span><span class="sub">Marquee · 26 · Hyderabad · Left-hand bat</span>
+        <span class="st">Matches 72 · Runs 2088 · Wickets 14</span></span>
+      </td>
+      <td class="c-base">₹50,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Sana Iqbal"></td>
+    </tr>
+    <tr data-lot="4" data-key="4" data-status="" data-team=""
+        data-search="deepak naik batter batter · 24 · pune · right-hand bat matches 46 · runs 1290 · wickets 0" data-cat="Batter">
+      <td class="c-lot"><span class="lot">4</span></td>
+      <td class="who">
+        <span class="avatar">DN</span>
+        <span class="who-t"><span class="nm">Deepak Naik</span><span class="sub">Batter · 24 · Pune · Right-hand bat</span>
+        <span class="st">Matches 46 · Runs 1290 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹25,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Deepak Naik"></td>
+    </tr>
+    <tr data-lot="5" data-key="5" data-status="" data-team=""
+        data-search="rohit sabharwal batter batter · 33 · delhi · left-hand bat matches 103 · runs 3011 · wickets 2" data-cat="Batter">
+      <td class="c-lot"><span class="lot">5</span></td>
+      <td class="who">
+        <span class="avatar">RS</span>
+        <span class="who-t"><span class="nm">Rohit Sabharwal</span><span class="sub">Batter · 33 · Delhi · Left-hand bat</span>
+        <span class="st">Matches 103 · Runs 3011 · Wickets 2</span></span>
+      </td>
+      <td class="c-base">₹25,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Rohit Sabharwal"></td>
+    </tr>
+    <tr data-lot="6" data-key="6" data-status="" data-team=""
+        data-search="imran sheikh batter batter · 22 · lucknow · right-hand bat matches 19 · runs 604 · wickets 0" data-cat="Batter">
+      <td class="c-lot"><span class="lot">6</span></td>
+      <td class="who">
+        <span class="avatar">IS</span>
+        <span class="who-t"><span class="nm">Imran Sheikh</span><span class="sub">Batter · 22 · Lucknow · Right-hand bat</span>
+        <span class="st">Matches 19 · Runs 604 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹20,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Imran Sheikh"></td>
+    </tr>
+    <tr data-lot="7" data-key="7" data-status="" data-team=""
+        data-search="kiran prabhu batter batter · 27 · mangaluru · right-hand bat matches 55 · runs 1402 · wickets 1" data-cat="Batter">
+      <td class="c-lot"><span class="lot">7</span></td>
+      <td class="who">
+        <span class="avatar">KP</span>
+        <span class="who-t"><span class="nm">Kiran Prabhu</span><span class="sub">Batter · 27 · Mangaluru · Right-hand bat</span>
+        <span class="st">Matches 55 · Runs 1402 · Wickets 1</span></span>
+      </td>
+      <td class="c-base">₹20,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Kiran Prabhu"></td>
+    </tr>
+    <tr data-lot="8" data-key="8" data-status="" data-team=""
+        data-search="neel bhatt batter batter · 20 · surat · left-hand bat matches 12 · runs 318 · wickets 0" data-cat="Batter">
+      <td class="c-lot"><span class="lot">8</span></td>
+      <td class="who">
+        <span class="avatar">NB</span>
+        <span class="who-t"><span class="nm">Neel Bhatt</span><span class="sub">Batter · 20 · Surat · Left-hand bat</span>
+        <span class="st">Matches 12 · Runs 318 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹15,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Neel Bhatt"></td>
+    </tr>
+    <tr data-lot="9" data-key="9" data-status="" data-team=""
+        data-search="faizan ali bowler bowler · 28 · bhopal · right-arm medium matches 67 · runs 210 · wickets 89" data-cat="Bowler">
+      <td class="c-lot"><span class="lot">9</span></td>
+      <td class="who">
+        <span class="avatar">FA</span>
+        <span class="who-t"><span class="nm">Faizan Ali</span><span class="sub">Bowler · 28 · Bhopal · Right-arm medium</span>
+        <span class="st">Matches 67 · Runs 210 · Wickets 89</span></span>
+      </td>
+      <td class="c-base">₹25,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Faizan Ali"></td>
+    </tr>
+    <tr data-lot="10" data-key="10" data-status="" data-team=""
+        data-search="sundar raman bowler bowler · 30 · chennai · left-arm spin matches 78 · runs 344 · wickets 96" data-cat="Bowler">
+      <td class="c-lot"><span class="lot">10</span></td>
+      <td class="who">
+        <span class="avatar">SR</span>
+        <span class="who-t"><span class="nm">Sundar Raman</span><span class="sub">Bowler · 30 · Chennai · Left-arm spin</span>
+        <span class="st">Matches 78 · Runs 344 · Wickets 96</span></span>
+      </td>
+      <td class="c-base">₹25,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Sundar Raman"></td>
+    </tr>
+    <tr data-lot="11" data-key="11" data-status="" data-team=""
+        data-search="harpreet gill bowler bowler · 25 · ludhiana · right-arm fast matches 41 · runs 96 · wickets 58" data-cat="Bowler">
+      <td class="c-lot"><span class="lot">11</span></td>
+      <td class="who">
+        <span class="avatar">HG</span>
+        <span class="who-t"><span class="nm">Harpreet Gill</span><span class="sub">Bowler · 25 · Ludhiana · Right-arm fast</span>
+        <span class="st">Matches 41 · Runs 96 · Wickets 58</span></span>
+      </td>
+      <td class="c-base">₹20,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Harpreet Gill"></td>
+    </tr>
+    <tr data-lot="12" data-key="12" data-status="" data-team=""
+        data-search="manoj tirkey bowler bowler · 23 · ranchi · right-arm off-spin matches 33 · runs 128 · wickets 44" data-cat="Bowler">
+      <td class="c-lot"><span class="lot">12</span></td>
+      <td class="who">
+        <span class="avatar">MT</span>
+        <span class="who-t"><span class="nm">Manoj Tirkey</span><span class="sub">Bowler · 23 · Ranchi · Right-arm off-spin</span>
+        <span class="st">Matches 33 · Runs 128 · Wickets 44</span></span>
+      </td>
+      <td class="c-base">₹20,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Manoj Tirkey"></td>
+    </tr>
+    <tr data-lot="13" data-key="13" data-status="" data-team=""
+        data-search="yusuf kadri bowler bowler · 19 · nagpur · left-arm fast matches 8 · runs 22 · wickets 13" data-cat="Bowler">
+      <td class="c-lot"><span class="lot">13</span></td>
+      <td class="who">
+        <span class="avatar">YK</span>
+        <span class="who-t"><span class="nm">Yusuf Kadri</span><span class="sub">Bowler · 19 · Nagpur · Left-arm fast</span>
+        <span class="st">Matches 8 · Runs 22 · Wickets 13</span></span>
+      </td>
+      <td class="c-base">₹15,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Yusuf Kadri"></td>
+    </tr>
+    <tr data-lot="14" data-key="14" data-status="" data-team=""
+        data-search="tanmay joshi all-rounder all-rounder · 27 · nashik · right-hand bat matches 62 · runs 1180 · wickets 51" data-cat="All-rounder">
+      <td class="c-lot"><span class="lot">14</span></td>
+      <td class="who">
+        <span class="avatar">TJ</span>
+        <span class="who-t"><span class="nm">Tanmay Joshi</span><span class="sub">All-rounder · 27 · Nashik · Right-hand bat</span>
+        <span class="st">Matches 62 · Runs 1180 · Wickets 51</span></span>
+      </td>
+      <td class="c-base">₹30,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Tanmay Joshi"></td>
+    </tr>
+    <tr data-lot="15" data-key="15" data-status="" data-team=""
+        data-search="reuben d’souza all-rounder all-rounder · 29 · goa · left-hand bat matches 70 · runs 1344 · wickets 47" data-cat="All-rounder">
+      <td class="c-lot"><span class="lot">15</span></td>
+      <td class="who">
+        <span class="avatar">RD</span>
+        <span class="who-t"><span class="nm">Reuben D’Souza</span><span class="sub">All-rounder · 29 · Goa · Left-hand bat</span>
+        <span class="st">Matches 70 · Runs 1344 · Wickets 47</span></span>
+      </td>
+      <td class="c-base">₹30,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Reuben D’Souza"></td>
+    </tr>
+    <tr data-lot="16" data-key="16" data-status="" data-team=""
+        data-search="anita sharma all-rounder all-rounder · 24 · jaipur · right-hand bat matches 38 · runs 702 · wickets 33" data-cat="All-rounder">
+      <td class="c-lot"><span class="lot">16</span></td>
+      <td class="who">
+        <span class="avatar">AS</span>
+        <span class="who-t"><span class="nm">Anita Sharma</span><span class="sub">All-rounder · 24 · Jaipur · Right-hand bat</span>
+        <span class="st">Matches 38 · Runs 702 · Wickets 33</span></span>
+      </td>
+      <td class="c-base">₹25,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Anita Sharma"></td>
+    </tr>
+    <tr data-lot="17" data-key="17" data-status="" data-team=""
+        data-search="girish kamath all-rounder all-rounder · 32 · udupi · right-hand bat matches 88 · runs 1610 · wickets 62" data-cat="All-rounder">
+      <td class="c-lot"><span class="lot">17</span></td>
+      <td class="who">
+        <span class="avatar">GK</span>
+        <span class="who-t"><span class="nm">Girish Kamath</span><span class="sub">All-rounder · 32 · Udupi · Right-hand bat</span>
+        <span class="st">Matches 88 · Runs 1610 · Wickets 62</span></span>
+      </td>
+      <td class="c-base">₹20,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Girish Kamath"></td>
+    </tr>
+    <tr data-lot="18" data-key="18" data-status="" data-team=""
+        data-search="sameer qureshi all-rounder all-rounder · 21 · aligarh · right-hand bat matches 16 · runs 288 · wickets 12" data-cat="All-rounder">
+      <td class="c-lot"><span class="lot">18</span></td>
+      <td class="who">
+        <span class="avatar">SQ</span>
+        <span class="who-t"><span class="nm">Sameer Qureshi</span><span class="sub">All-rounder · 21 · Aligarh · Right-hand bat</span>
+        <span class="st">Matches 16 · Runs 288 · Wickets 12</span></span>
+      </td>
+      <td class="c-base">₹15,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Sameer Qureshi"></td>
+    </tr>
+    <tr data-lot="19" data-key="19" data-status="" data-team=""
+        data-search="pranav deshmukh wicket-keeper wicket-keeper · 26 · mumbai · right-hand bat matches 74 · runs 1866 · wickets 0" data-cat="Wicket-keeper">
+      <td class="c-lot"><span class="lot">19</span></td>
+      <td class="who">
+        <span class="avatar">PD</span>
+        <span class="who-t"><span class="nm">Pranav Deshmukh</span><span class="sub">Wicket-keeper · 26 · Mumbai · Right-hand bat</span>
+        <span class="st">Matches 74 · Runs 1866 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹30,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Pranav Deshmukh"></td>
+    </tr>
+    <tr data-lot="20" data-key="20" data-status="" data-team=""
+        data-search="lalit chauhan wicket-keeper wicket-keeper · 30 · kanpur · right-hand bat matches 59 · runs 1104 · wickets 0" data-cat="Wicket-keeper">
+      <td class="c-lot"><span class="lot">20</span></td>
+      <td class="who">
+        <span class="avatar">LC</span>
+        <span class="who-t"><span class="nm">Lalit Chauhan</span><span class="sub">Wicket-keeper · 30 · Kanpur · Right-hand bat</span>
+        <span class="st">Matches 59 · Runs 1104 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹20,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Lalit Chauhan"></td>
+    </tr>
+    <tr data-lot="21" data-key="21" data-status="" data-team=""
+        data-search="zoya rahman wicket-keeper wicket-keeper · 22 · kolkata · left-hand bat matches 21 · runs 402 · wickets 0" data-cat="Wicket-keeper">
+      <td class="c-lot"><span class="lot">21</span></td>
+      <td class="who">
+        <span class="avatar">ZR</span>
+        <span class="who-t"><span class="nm">Zoya Rahman</span><span class="sub">Wicket-keeper · 22 · Kolkata · Left-hand bat</span>
+        <span class="st">Matches 21 · Runs 402 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹15,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Zoya Rahman"></td>
+    </tr>
+    <tr data-lot="22" data-key="22" data-status="" data-team=""
+        data-search="ajay barman batter batter · 19 · guwahati · right-hand bat matches 6 · runs 141 · wickets 0" data-cat="Batter">
+      <td class="c-lot"><span class="lot">22</span></td>
+      <td class="who">
+        <span class="avatar">AB</span>
+        <span class="who-t"><span class="nm">Ajay Barman</span><span class="sub">Batter · 19 · Guwahati · Right-hand bat</span>
+        <span class="st">Matches 6 · Runs 141 · Wickets 0</span></span>
+      </td>
+      <td class="c-base">₹10,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Ajay Barman"></td>
+    </tr>
+    <tr data-lot="23" data-key="23" data-status="" data-team=""
+        data-search="mohit verma bowler bowler · 18 · meerut · right-arm medium matches 4 · runs 8 · wickets 6" data-cat="Bowler">
+      <td class="c-lot"><span class="lot">23</span></td>
+      <td class="who">
+        <span class="avatar">MV</span>
+        <span class="who-t"><span class="nm">Mohit Verma</span><span class="sub">Bowler · 18 · Meerut · Right-arm medium</span>
+        <span class="st">Matches 4 · Runs 8 · Wickets 6</span></span>
+      </td>
+      <td class="c-base">₹10,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Mohit Verma"></td>
+    </tr>
+    <tr data-lot="24" data-key="24" data-status="" data-team=""
+        data-search="salim ansari all-rounder all-rounder · 20 · bhiwandi · left-hand bat matches 11 · runs 196 · wickets 9" data-cat="All-rounder">
+      <td class="c-lot"><span class="lot">24</span></td>
+      <td class="who">
+        <span class="avatar">SA</span>
+        <span class="who-t"><span class="nm">Salim Ansari</span><span class="sub">All-rounder · 20 · Bhiwandi · Left-hand bat</span>
+        <span class="st">Matches 11 · Runs 196 · Wickets 9</span></span>
+      </td>
+      <td class="c-base">₹10,000</td>
+      <td class="c-act">
+        <button class="res sold" data-act="sold" type="button">Sold</button>
+        <button class="res unsold" data-act="unsold" type="button">Unsold</button>
+      </td>
+      <td class="c-team"><div class="teamrow">
+        <button class="tm" data-team="Riverside Royals" type="button" aria-pressed="false" title="Riverside Royals">RR</button>
+        <button class="tm" data-team="Harbour Hawks" type="button" aria-pressed="false" title="Harbour Hawks">HH</button>
+        <button class="tm" data-team="Mill Road Mavericks" type="button" aria-pressed="false" title="Mill Road Mavericks">MRM</button>
+        <button class="tm" data-team="Old Town Titans" type="button" aria-pressed="false" title="Old Town Titans">OTT</button>
+      </div></td>
+      <td class="c-price"><input class="pz" type="text" inputmode="numeric" value="" aria-label="Price for Salim Ansari"></td>
+    </tr>
+  </tbody>
+</table>
+</main>
+
+<footer class="foot">
+  <span>Riverside Sports Club · riversidespl.example</span>
+  <artifact-local><span class="hint" id="hint"></span></artifact-local>
+</footer>
+
+<script>
+const TEAMS = [{"name":"Riverside Royals","purse":"500000"},{"name":"Harbour Hawks","purse":"500000"},{"name":"Mill Road Mavericks","purse":"500000"},{"name":"Old Town Titans","purse":"500000"}];
+const CURRENCY = "₹";
+
+(function(){
+  var rows = function(){ return [].slice.call(document.querySelectorAll('#rows tr')); };
+  var num = function(v){ var n = parseFloat(String(v||'').replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; };
+  var fmt = function(n){ return CURRENCY + Math.round(n).toLocaleString('en-IN'); };
+  var mode = document.getElementById('mode');
+
+  /* ---- writing ------------------------------------------------------
+     On a live doc, a change made inside a real event handler is already
+     the document — there is nothing to call. The capability is resolved only
+     to tell the viewer which mode they are in, and so a page opened outside
+     the artifact runtime still works locally.                          */
+  var ns = null, checked = false;
+  function setMode(state, text){ mode.dataset.state = state; mode.textContent = text; }
+  (async function(){
+    try { ns = (window.claude && claude.use) ? await claude.use('artifact') : null; }
+    catch (e) { ns = null; }
+    checked = true;
+    setMode(ns ? 'live' : 'local',
+      ns ? 'Live · everyone sees this' : 'Local only · not shared');
+  })();
+
+  document.addEventListener('claude:sync-off', function(){
+    setMode('readonly', 'Read-only view');
+    document.getElementById('hint').textContent =
+      'You can follow along here, but only the auction organisers can record results.';
+  });
+
+  /* ---- gestures ----------------------------------------------------- */
+  document.getElementById('rows').addEventListener('click', function(e){
+    var act = e.target.closest('[data-act]');
+    var tm  = e.target.closest('[data-team]');
+    var tr  = e.target.closest('tr');
+    if (!tr || (!act && !tm)) return;
+
+    if (act) {
+      var want = act.getAttribute('data-act');
+      tr.dataset.status = tr.dataset.status === want ? '' : want;
+      if (tr.dataset.status !== 'sold') { tr.dataset.team = ''; paintTeams(tr); }
+    } else {
+      var name = tm.getAttribute('data-team');
+      tr.dataset.team = tr.dataset.team === name ? '' : name;
+      if (tr.dataset.team && tr.dataset.status !== 'sold') tr.dataset.status = 'sold';
+      paintTeams(tr);
+    }
+    refresh();
+  });
+
+  document.getElementById('rows').addEventListener('input', function(e){
+    if (e.target.classList.contains('pz')) refresh();
+  });
+
+  // Chip pressed-state is derived from the row, so it is set inside the
+  // gesture (saved) and re-derived when someone else's edit lands (local).
+  function paintTeams(tr){
+    var chosen = tr.dataset.team;
+    [].forEach.call(tr.querySelectorAll('.tm'), function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-team') === chosen ? 'true' : 'false');
+    });
+  }
+
+  /* ---- another writer's edit landed --------------------------------- */
+  document.addEventListener('claude:edit', function(){
+    rows().forEach(paintTeams);
+    refresh();
+  });
+
+  /* ---- viewer-local: purses, search, filters ------------------------ */
+  var q = '', cat = '', openOnly = false;
+
+  function refresh(){
+    var spent = {}, count = {};
+    var sold = 0, unsold = 0;
+    rows().forEach(function(tr){
+      var s = tr.dataset.status;
+      if (s === 'sold') {
+        sold++;
+        var t = tr.dataset.team || '—';
+        spent[t] = (spent[t] || 0) + num(tr.querySelector('.pz').value);
+        count[t] = (count[t] || 0) + 1;
+      } else if (s === 'unsold') unsold++;
+    });
+
+    var rail = document.getElementById('rail');
+    var html = TEAMS.map(function(t){
+      var purse = num(t.purse), used = spent[t.name] || 0, left = purse - used;
+      return '<div class="purse" data-over="' + (purse && left < 0 ? 1 : 0) + '">' +
+        '<div class="n">' + t.name + '</div>' +
+        '<div class="c">' + (count[t.name] || 0) + ' signed</div>' +
+        '<b>' + (purse ? fmt(left) + '' : fmt(used)) + '</b>' +
+        '<div class="c">' + (purse ? 'remaining' : 'spent') + '</div></div>';
+    }).join('');
+    html += '<div class="purse tally"><div class="n">Progress</div>' +
+      '<div class="c">' + sold + ' sold · ' + unsold + ' unsold</div>' +
+      '<b>' + (rows().length - sold - unsold) + '</b><div class="c">still to call</div></div>';
+    rail.innerHTML = html;
+
+    rows().forEach(function(tr){
+      var show = true;
+      if (cat && tr.dataset.cat !== cat) show = false;
+      if (show && openOnly && tr.dataset.status) show = false;
+      if (show && q && tr.dataset.search.indexOf(q) < 0) show = false;
+      if (show) tr.removeAttribute('data-local-hidden');
+      else tr.setAttribute('data-local-hidden', '');
+    });
+  }
+
+  document.getElementById('q').addEventListener('input', function(e){
+    q = e.target.value.trim().toLowerCase(); refresh();
+  });
+  document.getElementById('filters').addEventListener('click', function(e){
+    var b = e.target.closest('.chip'); if (!b) return;
+    if (b.hasAttribute('data-only')) { openOnly = !openOnly; b.classList.toggle('on', openOnly); }
+    else {
+      cat = b.getAttribute('data-cat');
+      [].forEach.call(document.querySelectorAll('.chip[data-cat]'), function(x){ x.classList.toggle('on', x === b); });
+    }
+    refresh();
+  });
+
+  rows().forEach(paintTeams);
+  refresh();
+})();
+
+</script>
+</body>
+</html>

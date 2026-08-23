@@ -4,6 +4,7 @@ import { ROLES, PRESETS, getPreset } from './presets.js';
 import { normalize, buildBook, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
+import { buildLiveBoard } from './liveboard.js';
 import { SAMPLE } from './sample-data.js';
 
 const $ = s => document.querySelector(s);
@@ -163,7 +164,7 @@ function reparse(remap) {
   }
   renderMapList();
   fillColumnSelects();
-  $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project')
+  $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project, #btn-liveboard')
     .forEach(b => { b.disabled = rows.length === 0; });
   refresh();
 }
@@ -364,6 +365,16 @@ function bindActions() {
   }));
 
   $$('#btn-export, #btn-export-2').forEach(b => b.addEventListener('click', doExport));
+  $('#btn-liveboard').addEventListener('click', () => {
+    if (!S.players) return;
+    try {
+      const html = buildLiveBoard(S.players, S.settings);
+      download(`${slug(S.settings.title || 'auction')}-live-board.html`, html, 'text/html');
+      toast('Live board ready. Publish it as a Claude Artifact to share it with everyone.');
+    } catch (err) {
+      toast(`Could not build the live board: ${err.message}`, 'error');
+    }
+  });
   $('#btn-save-project').addEventListener('click', saveProject);
   $('#btn-load-project').addEventListener('click', openProject);
 }
@@ -426,7 +437,7 @@ function openProject() {
       renderMapList();
       $('#data-summary').classList.add('hidden');
       $('#row-count').textContent = S.rows.length;
-      $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project')
+      $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project, #btn-liveboard')
         .forEach(b => { b.disabled = false; });
       $('#empty-state').classList.add('hidden');
       render();
