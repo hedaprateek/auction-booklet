@@ -6,21 +6,29 @@
 
 import { byRole } from './mapping.js';
 import { formatMoney, esc, initials, compareValues } from './format.js';
-import { lookupPhoto, isUrl } from './images.js';
+import { lookupPhoto, isUrl, normalizeKey } from './images.js';
+import qrcode from '../vendor/qrcode.mjs';
 
 const LAYOUT = {
   1: { cols: 1, rows: 1, density: 'roomy',  maxStats: 9 },
   2: { cols: 1, rows: 2, density: 'roomy',  maxStats: 9 },
   4: { cols: 2, rows: 2, density: 'normal', maxStats: 6 },
-  6: { cols: 2, rows: 3, density: 'normal', maxStats: 6 },
+  // 6-up cards are wide but short: a photo on top leaves too little room for
+  // the body, so this density moves it alongside.
+  6: { cols: 2, rows: 3, density: 'mid',    maxStats: 6 },
   8: { cols: 2, rows: 4, density: 'tight',  maxStats: 4 },
   9: { cols: 3, rows: 3, density: 'tight',  maxStats: 4 },
 };
 
 const PAGE_SIZES = {
-  a4:     { w: '210mm',   h: '297mm',   css: 'A4' },
-  letter: { w: '215.9mm', h: '279.4mm', css: 'Letter' },
+  a4:     { w: '210mm',   h: '297mm',   mmH: 297,   css: 'A4' },
+  letter: { w: '215.9mm', h: '279.4mm', mmH: 279.4, css: 'Letter' },
 };
+
+// Millimetre budget for a page, used only by continuous-flow pagination.
+// These mirror the paddings in booklet.css; the browser test asserts that
+// nothing overflows, so they stay honest.
+const PAD = 11, GAP = 4, RHEAD_H = 11.5, RFOOT_H = 8, BAND_H = 11.5;
 
 const INDEX_ROWS_PER_PAGE = 30;
 const UNGROUPED = 'All Players';
@@ -87,43 +95,114 @@ export function groupPlayers(players, groupBy) {
   return [...map.entries()].map(([title, list]) => ({ title, players: list }));
 }
 
-/* ── step 2: player objects -> pages ────────────────────────────────────── */
+/* ── step 2: pagination ─────────────────────────────────────────────────── */
 
-export function buildBook(players, settings) {
+/**
+ * Continuous flow: sections run on from one another instead of each starting
+ * a fresh page. Pages are packed by millimetre budget and every row track is
+ * emitted explicitly, so a card is exactly as tall here as in sectioned mode.
+ */
+function flowPages(groups, layout, size, grouped) {
+  const contentH = size.mmH - 2 * PAD - RHEAD_H - RFOOT_H;
+  // Height of a card row on a page with no section band on it.
+  const nominal = (contentH - (layout.rows - 1) * GAP) / layout.rows;
+  // Bands eat into the card rows on their page, exactly as in sectioned mode.
+  // Stop packing once that squeeze would take a row below this much of normal.
+  const MIN_SQUEEZE = 0.6;
+
+  const rowHeight = (rows, bands) =>
+    (contentH - bands * BAND_H - Math.max(0, rows + bands - 1) * GAP) / rows;
+
+  const pages = [];
+  let cur = { items: [], rows: 0, bands: 0 };
+  const fits = (addRows, addBands) => {
+    const rows = cur.rows + addRows, bands = cur.bands + addBands;
+    if (rows > layout.rows) return false;
+    return rows === 0 || rowHeight(rows, bands) >= nominal * MIN_SQUEEZE;
+  };
+  const flush = () => {
+    if (cur.items.length) pages.push(cur);
+    cur = { items: [], rows: 0, bands: 0 };
+  };
+
+  for (const g of groups) {
+    if (grouped) {
+      // A band claims room for the first row beneath it, so a heading is
+      // never left stranded at the foot of a page.
+      if (!fits(1, 1)) flush();
+      cur.items.push({ type: 'band', group: g });
+      cur.bands++;
+    }
+    for (const cards of chunk(g.players, layout.cols)) {
+      if (!fits(1, 0)) flush();
+      cur.items.push({ type: 'row', cards, group: g });
+      cur.rows++;
+    }
+  }
+  flush();
+
+  for (const pg of pages) {
+    // Cap at nominal so a half-empty last page doesn't stretch its cards.
+    const h = round(Math.min(nominal, rowHeight(pg.rows, pg.bands)));
+    pg.rowsCss = pg.items.map(it => it.type === 'band' ? `${BAND_H}mm` : `${h}mm`).join(' ');
+  }
+  return pages;
+}
+
+const round = n => Math.round(n * 100) / 100;
+
+export function buildBook(players, settings, assets = {}) {
   const layout = LAYOUT[settings.perPage] || LAYOUT[4];
   const size = PAGE_SIZES[settings.pageSize] || PAGE_SIZES.a4;
   const groups = groupPlayers(players, settings.groupBy);
+  const grouped = !!settings.groupBy;
+  const continuous = settings.sectionBreak === false;
 
-  // Work out page numbers up front so the index can point at real pages.
+  // Page numbers are worked out first so the index can point at real pages.
   const indexPages = settings.showIndex ? Math.max(1, Math.ceil(players.length / INDEX_ROWS_PER_PAGE)) : 0;
   const teams = parseTeams(settings.teamsText);
   const preludes = (settings.rulesText.trim() ? 1 : 0) + (teams.length ? 1 : 0);
+  const firstPlayerPage = 1 + preludes + indexPages;
 
-  let n = 1 + preludes + indexPages;
-  for (const g of groups) {
-    const pageCount = Math.max(1, Math.ceil(g.players.length / settings.perPage));
-    g.startPage = n;
-    g.chunks = chunk(g.players, settings.perPage);
-    g.players.forEach((p, i) => { p.page = n + Math.floor(i / settings.perPage); });
-    n += pageCount;
+  let flow = null;
+  let playerPageCount;
+  if (continuous) {
+    flow = flowPages(groups, layout, size, grouped);
+    flow.forEach((pg, i) => {
+      for (const it of pg.items) {
+        if (it.type === 'row') it.cards.forEach(c => { c.page = firstPlayerPage + i; });
+      }
+    });
+    playerPageCount = flow.length;
+  } else {
+    let n = firstPlayerPage;
+    for (const g of groups) {
+      g.chunks = chunk(g.players, settings.perPage);
+      g.players.forEach((p, i) => { p.page = n + Math.floor(i / settings.perPage); });
+      n += g.chunks.length;
+    }
+    playerPageCount = n - firstPlayerPage;
   }
-  const totalNumbered = n - 1;
 
-  const ctx = { settings, layout, size, total: totalNumbered };
+  const ctx = { settings, layout, size, assets, total: firstPlayerPage + playerPageCount - 1 };
   let pageNo = 1;
   const out = [];
 
-  if (settings.showCover) out.push(coverPage(players, groups, settings, size));
+  if (settings.showCover) out.push(coverPage(players, groups, settings, ctx));
   if (settings.rulesText.trim()) out.push(rulesPage(settings, ctx, pageNo++));
   if (teams.length) out.push(teamsPage(teams, settings, ctx, pageNo++));
   for (let i = 0; i < indexPages; i++) {
     out.push(indexPage(players.slice(i * INDEX_ROWS_PER_PAGE, (i + 1) * INDEX_ROWS_PER_PAGE),
       settings, ctx, pageNo++, i, indexPages));
   }
-  for (const g of groups) {
-    g.chunks.forEach((cards, i) => {
-      out.push(cardsPage(cards, g, settings, ctx, pageNo++, i, g.chunks.length));
-    });
+  if (continuous) {
+    for (const pg of flow) out.push(flowPage(pg, settings, ctx, pageNo++));
+  } else {
+    for (const g of groups) {
+      g.chunks.forEach((cards, i) => {
+        out.push(cardsPage(cards, g, settings, ctx, pageNo++, i, g.chunks.length));
+      });
+    }
   }
 
   const style = `--accent:${cssColor(settings.accent)};--pw:${size.w};--ph:${size.h};--cols:${layout.cols};--rows:${layout.rows}`;
@@ -136,12 +215,17 @@ export function buildBook(players, settings) {
 
 /* ── pages ──────────────────────────────────────────────────────────────── */
 
-function coverPage(players, groups, s, size) {
+function coverPage(players, groups, s, ctx) {
   const facts = [
     { n: players.length, l: 'Players' },
     groups.length > 1 ? { n: groups.length, l: 'Categories' } : null,
     parseTeams(s.teamsText).length ? { n: parseTeams(s.teamsText).length, l: 'Teams' } : null,
   ].filter(Boolean);
+
+  const qr = s.qrLink && s.qrLink.trim()
+    ? `<div class="cover-qr">${qrSvg(s.qrLink.trim())}
+        <span>${esc(s.qrCaption || 'Scan for the digital booklet')}</span></div>`
+    : '';
 
   return page('cover', `
     <div class="cover-band"></div>
@@ -153,6 +237,7 @@ function coverPage(players, groups, s, size) {
       ${s.subtitle ? `<p class="cover-sub">${esc(s.subtitle)}</p>` : ''}
       ${facts.length ? `<div class="cover-facts">${facts.map(f =>
         `<div class="cover-fact"><b>${f.n}</b><span>${f.l}</span></div>`).join('')}</div>` : ''}
+      ${qr}
     </div>
     <div class="cover-foot">${esc(s.footer || '')}</div>
     <div class="cover-band"></div>
@@ -172,14 +257,22 @@ function rulesPage(s, ctx, no) {
 
 function teamsPage(teams, s, ctx, no) {
   const slots = Math.max(3, Number(s.teamSlots) || 8);
+  const logos = ctx.assets.teamLogos || new Map();
   return page('', rhead(s) + `
     <h2 class="ptitle">Teams<small>${teams.length} squads</small></h2>
-    <div class="teams">${teams.map(t => `
-      <div class="team">
-        <h3>${esc(t.name)}</h3>
-        ${t.purse ? `<div class="purse">Purse ${esc(formatMoney(t.purse, s.currency, s.numberFormat))}</div>` : ''}
+    <div class="teams">${teams.map(t => {
+      const logo = logos.get(normalizeKey(t.name));
+      return `<div class="team">
+        <div class="team-head">
+          ${logo ? `<img class="team-logo" src="${esc(logo)}" alt="">` : ''}
+          <div>
+            <h3>${esc(t.name)}</h3>
+            ${t.purse ? `<div class="purse">Purse ${esc(formatMoney(t.purse, s.currency, s.numberFormat))}</div>` : ''}
+          </div>
+        </div>
         <div class="slots">${Array.from({ length: slots }, () => '<div class="slot"></div>').join('')}</div>
-      </div>`).join('')}</div>` + rfoot(s, ctx, no));
+      </div>`;
+    }).join('')}</div>` + rfoot(s, ctx, no));
 }
 
 function indexPage(rows, s, ctx, no, part, parts) {
@@ -207,17 +300,33 @@ function indexPage(rows, s, ctx, no, part, parts) {
     </table>` + rfoot(s, ctx, no));
 }
 
+/** One page in sectioned mode: a single section's cards on a fixed grid. */
 function cardsPage(cards, group, s, ctx, no, part, parts) {
-  const band = group.ungrouped ? '' : `
-    <div class="sband">
-      <h2>${esc(group.title)}</h2>
-      <span>${group.players.length} player${group.players.length === 1 ? '' : 's'}${parts > 1 ? ` · ${part + 1}/${parts}` : ''}</span>
-    </div>`;
+  const band = group.ungrouped ? '' : sectionBand(group, parts > 1 ? `${part + 1}/${parts}` : '');
   return page('', rhead(s, group.ungrouped ? 'Players' : group.title) + band + `
     <div class="cards" data-density="${ctx.layout.density}" data-photos="${s.showPhotos ? 'on' : 'off'}">
       ${cards.map(p => card(p, s)).join('')}
     </div>` + rfoot(s, ctx, no));
 }
+
+/** One page in continuous mode: bands and card rows interleaved in one grid. */
+function flowPage(pg, s, ctx, no) {
+  const first = pg.items.find(i => i.group);
+  const items = pg.items.map(it => it.type === 'band'
+    ? sectionBand(it.group, '')
+    : it.cards.map(p => card(p, s)).join('')).join('');
+  return page('', rhead(s, first && !first.group.ungrouped ? first.group.title : 'Players') + `
+    <div class="cards flow" data-density="${ctx.layout.density}" data-photos="${s.showPhotos ? 'on' : 'off'}"
+         style="grid-template-rows:${pg.rowsCss}">
+      ${items}
+    </div>` + rfoot(s, ctx, no));
+}
+
+const sectionBand = (group, suffix) => `
+  <div class="sband">
+    <h2>${esc(group.title)}</h2>
+    <span>${group.players.length} player${group.players.length === 1 ? '' : 's'}${suffix ? ` · ${suffix}` : ''}</span>
+  </div>`;
 
 /* ── the player card ────────────────────────────────────────────────────── */
 
@@ -258,6 +367,22 @@ function card(p, s) {
 }
 
 /* ── small helpers ──────────────────────────────────────────────────────── */
+
+/** Print-quality QR as inline SVG — one path, no raster, no runtime dependency. */
+export function qrSvg(text, dark = '#16130f') {
+  const qr = qrcode(0, 'M');
+  qr.addData(String(text));
+  qr.make();
+  const n = qr.getModuleCount();
+  let d = '';
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+  }
+  const m = 2;
+  return `<svg class="qr" viewBox="${-m} ${-m} ${n + m * 2} ${n + m * 2}" role="img" aria-label="QR code">`
+    + `<rect x="${-m}" y="${-m}" width="${n + m * 2}" height="${n + m * 2}" fill="#fff"/>`
+    + `<path d="${d}" fill="${dark}"/></svg>`;
+}
 
 const page = (cls, inner) => `<section class="page ${cls}">${inner}</section>`;
 

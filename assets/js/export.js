@@ -4,6 +4,7 @@
 
 import { esc, formatMoney, initials } from './format.js';
 import { parseTeams } from './render.js';
+import { normalizeKey } from './images.js';
 
 /**
  * Photos appear in both the printed pages and the card list. Hoisting each
@@ -51,7 +52,10 @@ export async function buildShareFile(players, book, settings, opts = {}) {
     currency: settings.currency,
     tracker: !!opts.tracker,
     groupLabel: settings.groupLabel || 'Category',
-    teams: parseTeams(settings.teamsText),
+    teams: parseTeams(settings.teamsText).map(t => {
+      const logo = (opts.teamLogos || new Map()).get(normalizeKey(t.name));
+      return { name: t.name, purse: t.purse, p: logo ? idOf(logo) : -1 };
+    }),
     id: opts.id || 'book',
     players: playerPayload(players, settings, idOf),
   };
@@ -99,6 +103,14 @@ ${VIEWER_CSS}
   <div id="empty" class="vempty" hidden>No players match that search.</div>
   <div id="book" class="vbookwrap">${html}</div>
   <div id="track" class="vtrack"></div>
+  <div id="squads" class="vsquads">
+    <div class="squad-bar">
+      <button class="vghost" id="squads-back">← Back to tracker</button>
+      <button class="vghost" id="squads-print">Print squads</button>
+    </div>
+    <div class="bk" data-theme="${esc(settings.theme)}"
+      style="--accent:${esc(data.accent)};--pw:${book.pageSizeCss === 'A4' ? '210mm' : '215.9mm'};--ph:${book.pageSizeCss === 'A4' ? '297mm' : '279.4mm'}"></div>
+  </div>
 </main>
 
 <footer class="vfoot">${esc(data.footer)} <span>· Built with AuctionBook</span></footer>
@@ -185,12 +197,35 @@ body[data-view="track"] .vtrack{display:flex}
 .vfoot{max-width:1180px;margin:0 auto;padding:18px 14px 40px;font-size:12px;color:var(--vink3)}
 .vfoot span{opacity:.7}
 
+/* Final squads sheet — rendered with the booklet's own page styling so it
+   prints on the same paper as everything else. */
+.vsquads{display:none;flex-direction:column;align-items:center;gap:12px}
+body[data-view="squads"] .vsquads{display:flex}
+.squad-bar{display:flex;gap:8px;align-self:flex-start}
+body[data-view="squads"] .vgrid,body[data-view="squads"] #empty,
+body[data-view="squads"] .vtrack,body[data-view="squads"] .vbookwrap,
+body[data-view="squads"] .vtools,body[data-view="squads"] .vchips{display:none}
+.vsquads .squad{break-inside:avoid;page-break-inside:avoid;margin-bottom:6mm}
+.vsquads .squad-head{display:flex;align-items:center;gap:3mm;border-bottom:1pt solid var(--accent);padding-bottom:2mm;margin-bottom:2.5mm}
+.vsquads .squad-head img{width:12mm;height:12mm;object-fit:contain;flex:none}
+.vsquads .squad-head h3{margin:0;font-family:var(--serif);font-size:13pt}
+.vsquads .squad-head .m{margin-left:auto;text-align:right;font-size:8pt;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase}
+.vsquads .squad-head .m b{display:block;font-size:12pt;color:var(--accent);letter-spacing:0}
+.vsquads table{width:100%;border-collapse:collapse;font-size:9pt}
+.vsquads td{padding:1.4mm 2mm;border-bottom:.5pt solid var(--line)}
+.vsquads td.n{width:8mm;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.vsquads td.p{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.vsquads .none{font-size:9pt;color:var(--ink-3);font-style:italic;padding:2mm}
+
 @media print{
   .vbar,.vfoot,.vgrid,.vtrack,#empty{display:none!important}
   body{background:#fff}
   main{max-width:none;padding:0;margin:0}
   .vbookwrap{display:flex!important;gap:0}
   .vbookwrap .bk{transform:none!important}
+  body[data-view="squads"] .vbookwrap{display:none!important}
+  body[data-view="squads"] .vsquads{display:block!important}
+  .squad-bar{display:none!important}
 }`;
 
 /* ───────────────────────── viewer script ───────────────────────── */
@@ -308,7 +343,8 @@ const VIEWER_JS = `
     var html = '<div class="vt-bar"><b>' + sold.length + '</b> sold · <b>' +
       Object.keys(state.track).filter(function(k){ return state.track[k].status === 'unsold'; }).length + '</b> unsold · <b>' +
       (DATA.players.length - Object.keys(state.track).length) + '</b> remaining' +
-      '<button class="vghost" id="csv" style="margin-left:auto">Export CSV</button>' +
+      '<button class="vghost" id="squadsbtn" style="margin-left:auto">Final squads</button>' +
+      '<button class="vghost" id="csv">Export CSV</button>' +
       '<button class="vghost" id="reset">Reset</button></div>';
     html += '<div class="vt-sum">' + teams.map(function(tm){
       var picks = sold.filter(function(k){ return (state.track[k].team || 'Unassigned') === tm.name; });
@@ -324,6 +360,7 @@ const VIEWER_JS = `
     }).join('') + '</div>';
     $('#track').innerHTML = html;
 
+    $('#squadsbtn').onclick = function(){ renderSquads(); document.body.dataset.view = 'squads'; };
     $('#reset').onclick = function(){
       if (confirm('Clear every sold/unsold mark on this device?')) { state.track = {}; save(); renderCards(); renderTrack(); }
     };
@@ -341,10 +378,59 @@ const VIEWER_JS = `
     };
   }
 
+  /* ── final squads sheet ── */
+  function renderSquads(){
+    var byLot = {};
+    DATA.players.forEach(function(p){ byLot[p.l] = p; });
+    var sold = Object.keys(state.track).filter(function(k){ return state.track[k].status === 'sold'; });
+    var teams = DATA.teams.length ? DATA.teams : [{ name: 'Unassigned', purse: '', p: -1 }];
+    var money = function(n){ return DATA.currency + n.toLocaleString('en-IN'); };
+
+    var blocks = teams.map(function(tm){
+      var picks = sold.filter(function(k){ return (state.track[k].team || 'Unassigned') === tm.name; });
+      var spent = picks.reduce(function(s, k){ return s + num(state.track[k].price); }, 0);
+      var purse = num(tm.purse);
+      return '<div class="squad">' +
+        '<div class="squad-head">' +
+          (tm.p >= 0 ? '<img src="' + PHOTOS[tm.p] + '" alt="">' : '') +
+          '<h3>' + esc(tm.name) + '</h3>' +
+          '<div class="m">' + picks.length + ' player' + (picks.length === 1 ? '' : 's') +
+            (purse ? '<b>' + money(purse - spent) + ' left</b>' : (spent ? '<b>' + money(spent) + '</b>' : '')) +
+          '</div>' +
+        '</div>' +
+        (picks.length
+          ? '<table>' + picks.map(function(k, i){
+              var p = byLot[k] || { n: k, s: '' };
+              return '<tr><td class="n">' + (i + 1) + '</td><td>' + esc(p.n) +
+                (p.s ? ' <span style="color:var(--ink-3)">· ' + esc(p.s) + '</span>' : '') + '</td>' +
+                '<td class="p">' + (state.track[k].price ? money(num(state.track[k].price)) : '—') + '</td></tr>';
+            }).join('') + '</table>'
+          : '<div class="none">No players yet.</div>') +
+      '</div>';
+    }).join('');
+
+    var unsold = Object.keys(state.track).filter(function(k){ return state.track[k].status === 'unsold'; });
+    if (unsold.length) {
+      blocks += '<div class="squad"><div class="squad-head"><h3>Unsold</h3>' +
+        '<div class="m">' + unsold.length + ' player' + (unsold.length === 1 ? '' : 's') + '</div></div>' +
+        '<table>' + unsold.map(function(k, i){
+          var p = byLot[k] || { n: k };
+          return '<tr><td class="n">' + (i + 1) + '</td><td>' + esc(p.n) + '</td><td class="p">—</td></tr>';
+        }).join('') + '</table></div>';
+    }
+
+    $('#squads .bk').innerHTML = '<section class="page grow">' +
+      '<h2 class="ptitle">Final Squads<small>' + esc(DATA.title) +
+        (DATA.subtitle ? ' · ' + esc(DATA.subtitle) : '') + '</small></h2>' +
+      blocks + '</section>';
+  }
+
   /* ── chrome ── */
   $('#q').addEventListener('input', function(e){ state.q = e.target.value; renderCards(); });
   $('#sort').addEventListener('change', function(e){ state.sort = e.target.value; renderCards(); });
   $('#printbtn').addEventListener('click', function(){ document.body.dataset.view = 'book'; setTimeout(function(){ window.print(); }, 60); });
+  $('#squads-print').addEventListener('click', function(){ window.print(); });
+  $('#squads-back').addEventListener('click', function(){ document.body.dataset.view = 'track'; });
   document.querySelector('.vtabs').addEventListener('click', function(e){
     var b = e.target.closest('button[data-view]'); if (!b) return;
     document.body.dataset.view = b.getAttribute('data-view');

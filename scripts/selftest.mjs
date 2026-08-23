@@ -2,7 +2,7 @@
 //   node scripts/selftest.mjs
 import { SAMPLE } from '../assets/js/sample-data.js';
 import { autoMap, byRole } from '../assets/js/mapping.js';
-import { normalize, buildBook, parseTeams } from '../assets/js/render.js';
+import { normalize, buildBook, parseTeams, qrSvg } from '../assets/js/render.js';
 import { formatMoney } from '../assets/js/format.js';
 
 let failures = 0;
@@ -39,6 +39,7 @@ const settings = {
   logo: '', theme: 'classic', pageSize: 'a4', perPage: 4,
   groupBy: 'Category', sortBy: '', sortDesc: false,
   showCover: true, showIndex: true, writeIn: true, showPhotos: true, sequentialLots: false,
+  sectionBreak: true, qrLink: '',
 };
 const players = normalize(rows, fields, settings);
 const book = buildBook(players, settings);
@@ -71,6 +72,44 @@ check('ungrouped build has no section band', !noGroup.html.includes('class="sban
 
 const sorted = normalize(rows, fields, { ...settings, sortBy: 'Runs', sortDesc: true });
 check('descending sort puts the top scorer first', sorted[0].name === 'Rohit Sabharwal', sorted[0].name);
+
+console.log('\nContinuous flow');
+const flowSettings = { ...settings, sectionBreak: false };
+const flowBook = buildBook(normalize(rows, fields, flowSettings), flowSettings);
+check('uses fewer pages than sectioned mode', flowBook.pageCount < book.pageCount,
+  `${flowBook.pageCount} vs ${book.pageCount}`);
+check('still renders every card', (flowBook.html.match(/class="card"/g) || []).length === 24);
+check('keeps every section band', (flowBook.html.match(/class="sband"/g) || []).length === 5);
+check('emits explicit row tracks', /grid-template-rows:[\d.]+mm/.test(flowBook.html));
+check('no undefined leaked', !flowBook.html.includes('undefined'));
+
+const flowPlayers = normalize(rows, fields, flowSettings);
+buildBook(flowPlayers, flowSettings);
+check('every player still gets a page number', flowPlayers.every(p => p.page >= 1));
+const maxPage = Math.max(...flowPlayers.map(p => p.page));
+check('index never points past the last page', maxPage <= flowBook.pageCount, `${maxPage} vs ${flowBook.pageCount}`);
+
+for (const perPage of [1, 2, 4, 6, 8, 9]) {
+  const st = { ...flowSettings, perPage };
+  const b = buildBook(normalize(rows, fields, st), st);
+  const tracks = [...b.html.matchAll(/grid-template-rows:([^"]+)"/g)]
+    .map(m => m[1].trim().split(/\s+/).length);
+  check(`${perPage}/page flows without an empty page`, b.pageCount > 0 && tracks.every(t => t > 0));
+}
+
+console.log('\nQR code');
+const svg = qrSvg('https://example.com/booklet.html');
+check('produces an svg', svg.startsWith('<svg') && svg.includes('</svg>'));
+check('draws modules', (svg.match(/M\d+ \d+h1v1h-1z/g) || []).length > 40);
+const qrBook = buildBook(normalize(rows, fields, settings), { ...settings, qrLink: 'https://example.com/b.html' });
+check('cover carries the qr', qrBook.html.includes('cover-qr') && qrBook.html.includes('<svg class="qr"'));
+check('no qr when no link', !book.html.includes('cover-qr'));
+
+console.log('\nTeam logos');
+const logoBook = buildBook(normalize(rows, fields, settings), settings,
+  { teamLogos: new Map([['harbour hawks', 'data:image/png;base64,AAAA']]) });
+check('logo reaches the teams page', logoBook.html.includes('class="team-logo"'));
+check('only the matched team gets one', (logoBook.html.match(/team-logo/g) || []).length === 1);
 
 console.log(failures ? `\n${failures} check(s) failed\n` : '\nAll checks passed\n');
 process.exit(failures ? 1 : 0);

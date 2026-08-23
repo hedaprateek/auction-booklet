@@ -131,6 +131,8 @@
           </label>
         </div>
         <div class="divider"></div>
+        <label class="check"><input type="checkbox" id="s-sectionbreak" checked> Start each section on a new page</label>
+        <p class="hint">Turn this off to let sections run on from one another — fewer pages when your categories are small, and the section headings stay in place.</p>
         <label class="check"><input type="checkbox" id="s-cover" checked> Cover page</label>
         <label class="check"><input type="checkbox" id="s-index" checked> Index of all players</label>
         <label class="check"><input type="checkbox" id="s-writein" checked> “Sold to / Price” write-in line on each card</label>
@@ -148,6 +150,12 @@
         </label>
         <p class="hint">One team per line: <code>Name, Purse</code>. Purse is optional. Adds a teams page and powers the tracker in the shared booklet.</p>
         <label class="field">
+          <span>Team logos <em>(optional)</em></span>
+          <input type="file" id="s-teamlogos" accept="image/*" multiple>
+        </label>
+        <p class="hint">Matched to teams by file name, same as player photos — <code>harbour-hawks.png</code> matches “Harbour Hawks”.</p>
+        <p class="hint" id="logo-status"></p>
+        <label class="field">
           <span>Rules / info page</span>
           <textarea id="s-rules" rows="8" placeholder="• Each team must have 11 players.&#10;• Bid increments of 5,000.&#10;• Unsold players re-enter in the final round."></textarea>
         </label>
@@ -158,6 +166,12 @@
     <details class="panel" id="panel-share">
       <summary>5 · Share</summary>
       <div class="panel-body">
+        <label class="field">
+          <span>Link for the cover QR code</span>
+          <input type="text" id="s-qrlink" placeholder="https://myclub.example/booklet.html">
+        </label>
+        <p class="hint">Prints a QR code on the cover so people holding a paper copy can pull up the digital one. Leave empty to skip it.</p>
+        <div class="divider"></div>
         <label class="check"><input type="checkbox" id="s-tracker" checked> Include live auction tracker in the shared file</label>
         <p class="hint">Participants get search, filters, and an optional tracker to mark players sold/unsold against team purses. Their notes stay on their own device.</p>
         <button id="btn-export-2" class="btn btn-primary btn-block" disabled>Download shareable booklet</button>

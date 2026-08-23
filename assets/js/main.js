@@ -1,8 +1,8 @@
 import { readWorkbook, sheetGrid, gridToTable } from './parse.js';
 import { autoMap, prettyLabel } from './mapping.js';
 import { ROLES, PRESETS, getPreset } from './presets.js';
-import { normalize, buildBook } from './render.js';
-import { buildPhotoIndex, resizeToDataURL } from './images.js';
+import { normalize, buildBook, parseTeams } from './render.js';
+import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
 import { SAMPLE } from './sample-data.js';
 
@@ -17,18 +17,21 @@ const DEFAULTS = {
   groupBy: '', sortBy: '', sortDesc: false,
   currency: '₹', numberFormat: 'indian',
   showCover: true, showIndex: true, writeIn: true, showPhotos: true,
-  sequentialLots: false,
-  teamsText: '', rulesText: '', tracker: true,
+  sequentialLots: false, sectionBreak: true,
+  teamsText: '', rulesText: '', tracker: true, qrLink: '',
 };
 
 const S = {
   wb: null, sheetName: '', headerRow: 1,
   headers: [], rows: [], fields: [],
   photoIndex: new Map(),
+  teamLogos: new Map(),
   settings: { ...DEFAULTS },
   zoom: 'fit',
   book: null, players: null,
 };
+
+const assets = () => ({ teamLogos: S.teamLogos });
 
 /* ── boot ───────────────────────────────────────────────────────────────── */
 
@@ -83,6 +86,17 @@ function bindData() {
     if (S.photoIndex.size && !matched) {
       toast('No photos matched. Name each file after the player or their lot number.', 'error');
     }
+    refresh();
+  });
+
+  $('#s-teamlogos').addEventListener('change', async e => {
+    if (!e.target.files?.length) return;
+    $('#logo-status').textContent = 'Reading logos…';
+    S.teamLogos = await buildPhotoIndex(e.target.files);
+    const names = parseTeams(S.settings.teamsText).map(t => normalizeKey(t.name));
+    const matched = names.filter(n => S.teamLogos.has(n)).length;
+    $('#logo-status').textContent =
+      `${S.teamLogos.size} logo${S.teamLogos.size === 1 ? '' : 's'} loaded · matched to ${matched} of ${names.length} teams`;
     refresh();
   });
 
@@ -215,9 +229,9 @@ const BINDINGS = [
   ['#s-currency', 'currency', 'value'], ['#s-numfmt', 'numberFormat', 'value'],
   ['#s-cover', 'showCover', 'checked'], ['#s-index', 'showIndex', 'checked'],
   ['#s-writein', 'writeIn', 'checked'], ['#s-photos', 'showPhotos', 'checked'],
-  ['#s-lot', 'sequentialLots', 'checked'],
+  ['#s-lot', 'sequentialLots', 'checked'], ['#s-sectionbreak', 'sectionBreak', 'checked'],
   ['#s-teams', 'teamsText', 'value'], ['#s-rules', 'rulesText', 'value'],
-  ['#s-tracker', 'tracker', 'checked'],
+  ['#s-tracker', 'tracker', 'checked'], ['#s-qrlink', 'qrLink', 'value'],
 ];
 
 function bindSettings() {
@@ -299,7 +313,7 @@ function render() {
   $('#empty-state').classList.add('hidden');
 
   S.players = normalize(S.rows, S.fields, S.settings, S.photoIndex);
-  S.book = buildBook(S.players, S.settings);
+  S.book = buildBook(S.players, S.settings, assets());
   $('#preview').innerHTML = S.book.html;
   $('#page-count').textContent =
     `${S.book.pageCount} page${S.book.pageCount === 1 ? '' : 's'} · ${S.players.length} players`;
@@ -364,6 +378,7 @@ async function doExport() {
       groupLabel: groupField ? groupField.label : 'Category',
     }, {
       tracker: S.settings.tracker,
+      teamLogos: S.teamLogos,
       id: slug(S.settings.title || 'auction'),
     });
     download(`${slug(S.settings.title || 'auction-booklet')}.html`, html, 'text/html');
@@ -383,6 +398,7 @@ function saveProject() {
     headers: S.headers,
     rows: S.rows,
     photos: [...S.photoIndex.entries()],
+    teamLogos: [...S.teamLogos.entries()],
   };
   download(`${slug(S.settings.title || 'auction')}.auctionbook.json`,
     JSON.stringify(project), 'application/json');
@@ -404,6 +420,7 @@ function openProject() {
       S.headers = p.headers;
       S.rows = p.rows;
       S.photoIndex = new Map(p.photos || []);
+      S.teamLogos = new Map(p.teamLogos || []);
       writeSettingsToForm();
       fillColumnSelects();
       renderMapList();

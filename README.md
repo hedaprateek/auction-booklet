@@ -14,7 +14,8 @@ Load an Excel or CSV file and AuctionBook gives you:
 
 - **A printed booklet** — cover, rules page, teams page, an index of every player, and player cards laid out 1, 2, 4, 6, 8 or 9 to a page. Print it or save it as a PDF.
 - **A shareable file** — one self-contained `.html` you can send on WhatsApp or email. It opens offline on any phone or laptop, with search, category filters, and every photo embedded.
-- **A live auction tracker** (optional, inside the shared file) — mark players sold or unsold, assign them to teams, and watch each team's purse count down. Export the results as CSV when you're done.
+- **A live auction tracker** (optional, inside the shared file) — mark players sold or unsold, assign them to teams, and watch each team's purse count down. Then print the **final squads** sheet or export the results as CSV.
+- **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
 
 Everything runs in the browser. Your player list is never uploaded anywhere — there is no server to upload it to.
 
@@ -46,7 +47,7 @@ Every column is assigned a role. You can change any of them.
 | **Note** | Longer free text at the bottom of the card. |
 | **Hide** | Left out of the booklet entirely. |
 
-Stats print in spreadsheet order, and a card fits **9** stats at 1–2 cards per page, **6** at 4–6, and **4** at 8–9. If you have more columns than that, set the ones you don't need to **Hide** so the right ones make the cut.
+Stats print in spreadsheet order, and a card fits **9** stats at 1–2 cards per page, **6** at 4–6, and **4** at 8–9. If you have more columns than that, set the ones you don't need to **Hide** so the right ones make the cut. At 8 and 9 cards per page there's no room for notes, so those are dropped too.
 
 **Personal columns are hidden by default.** Anything that looks like a phone number, email, address, date of birth or ID number is set to *Hide* automatically — a booklet gets handed around a room, and that data has no business being in it. You can override this, but think twice.
 
@@ -87,7 +88,19 @@ Use **Print / PDF**, then in the browser's print dialog:
 - Set **Margins** to *None*
 - Turn on **Background graphics** — without it the section bands and stat tiles print blank
 
-Page size follows your A4 / Letter setting. Each section starts on a fresh page, so the booklet can be split up and handed to different tables.
+Page size follows your A4 / Letter setting.
+
+### Sections: separate pages or continuous
+
+By default each category starts on a fresh page, so the booklet can be split up and handed to different tables. If your categories are small that wastes paper — a 3-player section still costs a whole sheet. Turn off **Start each section on a new page** and sections run on from one another, with the heading bands staying exactly where they belong. On the demo data that's 11 pages instead of 12; the lopsider your categories, the more it saves.
+
+Cards stay the same size either way, and a section heading never lands orphaned at the foot of a page.
+
+### Teams, logos and final squads
+
+Add teams as `Name, Purse` (one per line) and you get a teams page with blank squad slots to write into. Drop in a folder of logo images — matched by file name, same as player photos — and they appear next to each team.
+
+If you enabled the tracker in the shared file, **Final squads** turns the day's results into a printable sheet: each team's signings with prices, purse remaining, and the unsold list.
 
 ## Running it locally
 
@@ -119,7 +132,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 
 `render.js` returns strings rather than touching the DOM, so the preview, the print output and the shared file are all rendered by exactly the same code.
 
-[SheetJS](https://sheetjs.com/) (Apache-2.0) is vendored in `assets/vendor/` to keep the app dependency-free and usable offline.
+Two libraries are vendored in `assets/vendor/` to keep the app dependency-free and usable offline: [SheetJS](https://sheetjs.com/) (Apache-2.0) for reading spreadsheets, and [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT) for the cover QR, which is emitted as inline SVG so it stays sharp in print.
 
 ## Licence
 

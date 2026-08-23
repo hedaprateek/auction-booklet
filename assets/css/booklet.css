@@ -38,6 +38,8 @@
   print-color-adjust: exact;
 }
 .bk .page:last-child { break-after: auto; page-break-after: auto; }
+/* A page that may run past one sheet and let the browser split it. */
+.bk .page.grow { height: auto; min-height: var(--ph); overflow: visible; display: block; }
 
 /* ── running head / foot ─────────────────────────────────── */
 .bk .rhead {
@@ -76,6 +78,9 @@
 .bk .cover-fact b { display: block; font-size: 20pt; font-family: var(--serif); color: var(--accent); line-height: 1; }
 .bk .cover-fact span { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
 .bk .cover-foot { padding: 0 var(--pad) 9mm; text-align: center; font-size: 8.5pt; color: var(--ink-3); }
+.bk .cover-qr { margin-top: 12mm; display: flex; flex-direction: column; align-items: center; gap: 2.5mm; }
+.bk .cover-qr .qr { width: 28mm; height: 28mm; display: block; }
+.bk .cover-qr span { font-size: 7.5pt; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
 
 /* ── generic page title ──────────────────────────────────── */
 .bk .ptitle {
@@ -104,6 +109,8 @@
   border: .8pt solid var(--line); border-left: 2.5mm solid var(--accent);
   border-radius: 1.5mm; padding: 4mm;
 }
+.bk .team-head { display: flex; align-items: center; gap: 3mm; }
+.bk .team-logo { width: 13mm; height: 13mm; object-fit: contain; flex: none; }
 .bk .team h3 { margin: 0 0 1mm; font-size: 12pt; font-family: var(--serif); }
 .bk .team .purse { font-size: 8pt; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
 .bk .team .slots { margin-top: 3mm; }
@@ -135,6 +142,10 @@
   grid-template-rows: repeat(var(--rows), 1fr);
   gap: 4mm;
 }
+/* Continuous mode puts the section bands inside the grid, on explicit
+   row tracks emitted per page, so cards keep their usual height. */
+.bk .cards.flow { align-content: start; }
+.bk .cards.flow > .sband { grid-column: 1 / -1; margin-bottom: 0; align-self: stretch; }
 .bk .card {
   border: .8pt solid var(--line); border-radius: 2mm; overflow: hidden;
   display: flex; background: var(--paper); min-height: 0; position: relative;
@@ -154,6 +165,12 @@
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
 }
 .bk .card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 3mm; gap: 1.5mm; }
+/* Nothing in the card body may shrink. Flex shrinking silently clips text
+   mid-glyph — and half a line of a player's note looks like a rendering bug.
+   Each block is sized by its own rules (the note line-clamps), so a card that
+   genuinely runs long overflows visibly instead of quietly mangling itself. */
+.bk .card-name, .bk .card-sub, .bk .pills,
+.bk .stats, .bk .note, .bk .card-foot { flex: none; }
 .bk .card-name {
   font-family: var(--serif); font-weight: 700; line-height: 1.12; margin: 0;
   overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -216,6 +233,22 @@
 .bk [data-density="normal"] .stat dd { font-size: 8.5pt; }
 .bk [data-density="normal"] .note { font-size: 6.8pt; }
 .bk [data-density="normal"] .base .v { font-size: 10pt; }
+
+/* mid: 6 cards per page — wide and short, so the photo sits alongside */
+.bk [data-density="mid"] .card { flex-direction: row; }
+.bk [data-density="mid"] .card-photo { width: 32%; }
+.bk [data-density="mid"] .card-photo .noimg { font-size: 16pt; }
+.bk [data-density="mid"] .card-body { padding: 2.8mm; gap: 1.2mm; }
+.bk [data-density="mid"] .card-name { font-size: 11.5pt; }
+.bk [data-density="mid"] .card-sub { font-size: 7pt; }
+.bk [data-density="mid"] .pill { font-size: 5.4pt; }
+.bk [data-density="mid"] .stats { grid-template-columns: repeat(2, 1fr); }
+.bk [data-density="mid"] .stat { padding: 1mm 1.4mm; }
+.bk [data-density="mid"] .stat dt { font-size: 5.4pt; }
+.bk [data-density="mid"] .stat dd { font-size: 8pt; }
+.bk [data-density="mid"] .note { font-size: 6.5pt; -webkit-line-clamp: 2; }
+.bk [data-density="mid"] .base .v { font-size: 9.5pt; }
+.bk [data-density="mid"] .writein div { padding-bottom: 2.8mm; }
 
 /* tight: 8–9 cards per page */
 .bk [data-density="tight"] .card { flex-direction: row; }
