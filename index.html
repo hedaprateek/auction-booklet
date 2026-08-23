@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AuctionBook — Sports Auction Booklet Builder</title>
+<meta name="description" content="Turn a spreadsheet of players into a print-ready auction booklet. Works entirely in your browser — no data ever leaves your device.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="assets/css/booklet.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">🏆</span>
+    <span class="brand-name">AuctionBook</span>
+    <span class="brand-tag">auction booklet builder</span>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-load-project" class="btn btn-ghost" title="Load a previously saved .auctionbook.json">Open project</button>
+    <button id="btn-save-project" class="btn btn-ghost" disabled>Save project</button>
+    <button id="btn-print" class="btn btn-ghost" disabled>Print / PDF</button>
+    <button id="btn-export" class="btn btn-primary" disabled>Share booklet&nbsp;↓</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ───────────────────────── sidebar ───────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <details class="panel" open id="panel-data">
+      <summary>1 · Player data</summary>
+      <div class="panel-body">
+        <div id="dropzone" class="dropzone">
+          <input type="file" id="file-input" accept=".xlsx,.xls,.xlsm,.csv,.txt" hidden>
+          <div class="dz-icon">📄</div>
+          <div class="dz-title">Drop your Excel or CSV here</div>
+          <div class="dz-sub">or <button type="button" class="linkish" id="btn-browse">browse files</button></div>
+        </div>
+        <p class="hint">Everything runs in your browser. Your player list is never uploaded to any server.</p>
+
+        <div id="data-summary" class="hidden">
+          <label class="field">
+            <span>Sheet</span>
+            <select id="sheet-select"></select>
+          </label>
+          <label class="field">
+            <span>Header row</span>
+            <input type="number" id="header-row" min="1" value="1">
+          </label>
+          <p class="stat-line"><strong id="row-count">0</strong> players · <strong id="col-count">0</strong> columns</p>
+        </div>
+
+        <div class="divider"></div>
+        <label class="field">
+          <span>Player photos <em>(optional)</em></span>
+          <input type="file" id="photo-input" accept="image/*" multiple>
+        </label>
+        <p class="hint">Select a folder of images. Each file is matched to a player by file name — e.g. <code>12.jpg</code> matches lot 12, <code>ravi-kumar.png</code> matches “Ravi Kumar”. Images are shrunk automatically so the shared file stays small.</p>
+        <p class="hint" id="photo-status"></p>
+
+        <div class="divider"></div>
+        <p class="hint">No spreadsheet handy? <a href="sample/sample-cricket.xlsx" download>Download a sample</a> or <button type="button" class="linkish" id="btn-load-sample">load the demo data</button>.</p>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-columns">
+      <summary>2 · Columns <span class="badge-count" id="col-badge"></span></summary>
+      <div class="panel-body">
+        <label class="field">
+          <span>Sport preset</span>
+          <select id="preset-select"></select>
+        </label>
+        <p class="hint">A preset only seeds sensible defaults — every column below stays fully editable.</p>
+        <div class="divider"></div>
+        <div class="maplist-head">
+          <span>Column</span><span>Shown as</span><span>Role</span>
+        </div>
+        <div id="maplist" class="maplist"></div>
+        <p class="hint" style="margin-top:12px">Stats appear in spreadsheet order. A printed card fits 9 stats at 1–2 cards per page, 6 at 4–6, and 4 at 8–9 — set the extras to <strong>Hide</strong> if you want to choose which ones make the cut. Phone numbers, emails and similar personal columns are hidden automatically.</p>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-book">
+      <summary>3 · Booklet</summary>
+      <div class="panel-body">
+        <label class="field"><span>Title</span><input type="text" id="s-title" placeholder="Premier League Auction"></label>
+        <label class="field"><span>Subtitle</span><input type="text" id="s-subtitle" placeholder="Season 2026 · 14 March, Community Ground"></label>
+        <label class="field"><span>Footer note</span><input type="text" id="s-footer" placeholder="Organised by …"></label>
+        <label class="field">
+          <span>Logo <em>(optional)</em></span>
+          <input type="file" id="s-logo" accept="image/*">
+        </label>
+        <div class="row2">
+          <label class="field"><span>Accent colour</span><input type="color" id="s-accent" value="#c2410c"></label>
+          <label class="field"><span>Theme</span>
+            <select id="s-theme">
+              <option value="classic">Classic</option>
+              <option value="bold">Bold</option>
+              <option value="mono">Minimal</option>
+            </select>
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Page size</span>
+            <select id="s-pagesize"><option value="a4">A4</option><option value="letter">Letter</option></select>
+          </label>
+          <label class="field"><span>Cards per page</span>
+            <select id="s-percard">
+              <option value="1">1</option><option value="2">2</option>
+              <option value="4" selected>4</option><option value="6">6</option>
+              <option value="8">8</option><option value="9">9</option>
+            </select>
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Group into sections by</span><select id="s-groupby"></select></label>
+          <label class="field"><span>Sort players by</span><select id="s-sortby"></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="s-sortdesc"> Reverse the sort order</label>
+        <div class="row2">
+          <label class="field"><span>Currency</span><input type="text" id="s-currency" value="₹" maxlength="4"></label>
+          <label class="field"><span>Number style</span>
+            <select id="s-numfmt">
+              <option value="indian">Indian (L / Cr)</option>
+              <option value="grouped">1,00,000</option>
+              <option value="intl">100,000</option>
+              <option value="raw">As typed</option>
+            </select>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <label class="check"><input type="checkbox" id="s-cover" checked> Cover page</label>
+        <label class="check"><input type="checkbox" id="s-index" checked> Index of all players</label>
+        <label class="check"><input type="checkbox" id="s-writein" checked> “Sold to / Price” write-in line on each card</label>
+        <label class="check"><input type="checkbox" id="s-photos" checked> Show photos</label>
+        <label class="check"><input type="checkbox" id="s-lot"> Number players sequentially (ignore ID column)</label>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-extra">
+      <summary>4 · Teams &amp; rules</summary>
+      <div class="panel-body">
+        <label class="field">
+          <span>Teams &amp; purse</span>
+          <textarea id="s-teams" rows="6" placeholder="Royal Strikers, 1000000&#10;Titans XI, 1000000&#10;Falcons, 1000000"></textarea>
+        </label>
+        <p class="hint">One team per line: <code>Name, Purse</code>. Purse is optional. Adds a teams page and powers the tracker in the shared booklet.</p>
+        <label class="field">
+          <span>Rules / info page</span>
+          <textarea id="s-rules" rows="8" placeholder="• Each team must have 11 players.&#10;• Bid increments of 5,000.&#10;• Unsold players re-enter in the final round."></textarea>
+        </label>
+        <p class="hint">Leave empty to skip this page. Lines starting with <code>#</code> become headings.</p>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-share">
+      <summary>5 · Share</summary>
+      <div class="panel-body">
+        <label class="check"><input type="checkbox" id="s-tracker" checked> Include live auction tracker in the shared file</label>
+        <p class="hint">Participants get search, filters, and an optional tracker to mark players sold/unsold against team purses. Their notes stay on their own device.</p>
+        <button id="btn-export-2" class="btn btn-primary btn-block" disabled>Download shareable booklet</button>
+        <p class="hint">One self-contained <code>.html</code> file — photos included, opens offline on any phone or laptop. Send it on WhatsApp, email, or host it (see the README for publishing it on your own site).</p>
+        <div class="divider"></div>
+        <button id="btn-print-2" class="btn btn-block" disabled>Print / Save as PDF</button>
+        <p class="hint">Use your browser's print dialog. Set margins to <strong>None</strong> and enable <strong>background graphics</strong> for best results.</p>
+      </div>
+    </details>
+
+    <footer class="sidebar-foot">
+      <a href="https://github.com/hedaprateek/auction-booklet" target="_blank" rel="noopener">Source on GitHub</a>
+    </footer>
+  </aside>
+
+  <!-- ───────────────────────── preview ───────────────────────── -->
+  <section class="preview-wrap">
+    <div class="preview-bar">
+      <span id="page-count" class="muted">No booklet yet</span>
+      <div class="zoom">
+        <button class="btn btn-icon" id="zoom-out" title="Zoom out">−</button>
+        <span id="zoom-label">Fit</span>
+        <button class="btn btn-icon" id="zoom-in" title="Zoom in">+</button>
+      </div>
+    </div>
+    <div class="preview-scroll" id="preview-scroll">
+      <div id="empty-state" class="empty">
+        <div class="empty-art">🏏 ⚽ 🏐 🏀</div>
+        <h2>Build an auction booklet from a spreadsheet</h2>
+        <p>Load your player list on the left. Any column you don't map becomes a stat on the player's card — so the same tool works for cricket, football, kabaddi, volleyball, or anything else.</p>
+        <button class="btn btn-primary" id="btn-load-sample-2">Try it with demo data</button>
+      </div>
+      <div id="preview" class="preview"></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="assets/vendor/xlsx.full.min.js"></script>
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>

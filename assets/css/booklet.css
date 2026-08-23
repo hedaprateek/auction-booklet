@@ -1,0 +1,250 @@
+/* AuctionBook — the booklet itself.
+   This file is also inlined verbatim into the shareable single-file export,
+   so it must not depend on anything from app.css. */
+
+.bk {
+  --accent: #c2410c;
+  --paper: #ffffff;
+  --ink: #16130f;
+  --ink-2: #4a443d;
+  --ink-3: #8a8178;
+  --line: #ded8d0;
+  --tint: color-mix(in srgb, var(--accent) 7%, #fff);
+  --pw: 210mm;
+  --ph: 297mm;
+  --pad: 11mm;
+  --cols: 2;
+  --rows: 2;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  font-family: var(--sans);
+}
+.bk[data-theme="mono"] { --tint: #f6f5f3; }
+
+.bk .page {
+  width: var(--pw);
+  height: var(--ph);
+  padding: var(--pad);
+  background: var(--paper);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(0,0,0,.13);
+  break-after: page;
+  page-break-after: always;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.bk .page:last-child { break-after: auto; page-break-after: auto; }
+
+/* ── running head / foot ─────────────────────────────────── */
+.bk .rhead {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 8pt; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); border-bottom: .6pt solid var(--line);
+  padding-bottom: 2.5mm; margin-bottom: 5mm; flex: none;
+}
+.bk .rhead strong { color: var(--accent); font-weight: 700; }
+.bk .rfoot {
+  margin-top: auto; padding-top: 3mm; border-top: .6pt solid var(--line);
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 7.5pt; color: var(--ink-3); flex: none;
+}
+.bk .pageno { font-variant-numeric: tabular-nums; }
+
+/* ── cover ───────────────────────────────────────────────── */
+.bk .cover { justify-content: space-between; padding: 0; }
+.bk .cover-band { height: 14mm; background: var(--accent); flex: none; }
+.bk .cover-main { padding: 0 var(--pad); text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.bk .cover-logo { max-height: 34mm; max-width: 70%; margin: 0 auto 9mm; object-fit: contain; }
+.bk .cover-kicker {
+  font-size: 9.5pt; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: 6mm;
+}
+.bk .cover-title {
+  font-family: var(--serif); font-size: 34pt; line-height: 1.1;
+  letter-spacing: -.015em; margin: 0; font-weight: 700;
+}
+.bk .cover-rule { width: 26mm; height: 1.2mm; background: var(--accent); margin: 7mm auto; }
+.bk .cover-sub { font-size: 12pt; color: var(--ink-2); line-height: 1.5; margin: 0; }
+.bk .cover-facts {
+  display: flex; justify-content: center; gap: 14mm; margin-top: 14mm;
+  padding-top: 8mm; border-top: .6pt solid var(--line);
+}
+.bk .cover-fact b { display: block; font-size: 20pt; font-family: var(--serif); color: var(--accent); line-height: 1; }
+.bk .cover-fact span { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.bk .cover-foot { padding: 0 var(--pad) 9mm; text-align: center; font-size: 8.5pt; color: var(--ink-3); }
+
+/* ── generic page title ──────────────────────────────────── */
+.bk .ptitle {
+  font-family: var(--serif); font-size: 19pt; margin: 0 0 4mm;
+  letter-spacing: -.01em; flex: none;
+}
+.bk .ptitle small { display: block; font-family: var(--sans); font-size: 8.5pt; font-weight: 400; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; margin-top: 1.5mm; }
+
+/* ── index table ─────────────────────────────────────────── */
+.bk .idx { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+.bk .idx th {
+  text-align: left; font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); border-bottom: .8pt solid var(--ink); padding: 0 2mm 1.6mm;
+  font-weight: 700;
+}
+.bk .idx td { padding: 1.5mm 2mm; border-bottom: .5pt solid var(--line); vertical-align: baseline; }
+.bk .idx tr:nth-child(even) td { background: var(--tint); }
+.bk .idx .c-lot { width: 11mm; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.bk .idx .c-name { font-weight: 600; }
+.bk .idx .c-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bk .idx .c-pg { width: 10mm; text-align: right; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* ── teams page ──────────────────────────────────────────── */
+.bk .teams { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5mm; }
+.bk .team {
+  border: .8pt solid var(--line); border-left: 2.5mm solid var(--accent);
+  border-radius: 1.5mm; padding: 4mm;
+}
+.bk .team h3 { margin: 0 0 1mm; font-size: 12pt; font-family: var(--serif); }
+.bk .team .purse { font-size: 8pt; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
+.bk .team .slots { margin-top: 3mm; }
+.bk .team .slot { border-bottom: .5pt dotted var(--ink-3); height: 5.5mm; }
+
+/* ── rules page ──────────────────────────────────────────── */
+.bk .rules { font-size: 10pt; line-height: 1.65; column-gap: 8mm; }
+.bk .rules p { margin: 0 0 2.5mm; }
+.bk .rules h3 {
+  font-size: 8.5pt; letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+  margin: 5mm 0 2mm; font-weight: 700;
+}
+.bk .rules h3:first-child { margin-top: 0; }
+
+/* ── section divider band ────────────────────────────────── */
+.bk .sband {
+  background: var(--accent); color: #fff; padding: 3mm 4mm; border-radius: 1.5mm;
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 4mm; flex: none;
+}
+.bk .sband h2 { margin: 0; font-size: 13pt; font-family: var(--serif); font-weight: 700; }
+.bk .sband span { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+.bk[data-theme="mono"] .sband { background: var(--ink); }
+
+/* ── card grid ───────────────────────────────────────────── */
+.bk .cards {
+  flex: 1; display: grid; min-height: 0;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-template-rows: repeat(var(--rows), 1fr);
+  gap: 4mm;
+}
+.bk .card {
+  border: .8pt solid var(--line); border-radius: 2mm; overflow: hidden;
+  display: flex; background: var(--paper); min-height: 0; position: relative;
+}
+.bk[data-theme="bold"] .card { border-color: var(--accent); border-width: 1pt; }
+
+/* photo */
+.bk .card-photo { flex: none; position: relative; background: var(--tint); overflow: hidden; }
+.bk .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bk .card-photo .noimg {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); color: var(--accent); opacity: .5; font-weight: 700;
+}
+.bk .lot {
+  position: absolute; top: 0; left: 0; background: var(--accent); color: #fff;
+  font-size: 7.5pt; font-weight: 700; padding: .8mm 2mm; border-bottom-right-radius: 1.5mm;
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}
+.bk .card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 3mm; gap: 1.5mm; }
+.bk .card-name {
+  font-family: var(--serif); font-weight: 700; line-height: 1.12; margin: 0;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.bk .card-sub { color: var(--ink-2); line-height: 1.3; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bk .pills { display: flex; flex-wrap: wrap; gap: 1.2mm; }
+.bk .pill {
+  background: var(--tint); border: .5pt solid color-mix(in srgb, var(--accent) 35%, #fff);
+  color: var(--accent); border-radius: 999px; padding: .3mm 1.8mm;
+  font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+}
+.bk .stats { display: grid; gap: 1.2mm; }
+/* price and the write-in line always sit on the card's bottom edge */
+.bk .card-foot { margin-top: auto; }
+.bk .stat { background: var(--tint); border-radius: 1mm; padding: 1.2mm 1.6mm; min-width: 0; }
+.bk .stat dt {
+  font-size: 5.6pt; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3);
+  font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;
+}
+.bk .stat dd { margin: 0; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bk .note { color: var(--ink-2); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.bk .base {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 2mm;
+  border-top: .6pt solid var(--line); padding-top: 1.4mm; margin-top: 1.4mm;
+}
+.bk .base .k { font-size: 5.8pt; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+.bk .base .v { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.bk .writein { display: flex; gap: 2mm; margin-top: 1.4mm; }
+.bk .writein div { flex: 1; border-bottom: .6pt dotted var(--ink-3); padding-bottom: 3.2mm; }
+.bk .writein div:last-child { flex: 0 0 32%; }
+.bk .writein span { font-size: 5.5pt; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+
+/* ── density presets ─────────────────────────────────────── */
+/* roomy: 1–2 cards per page, photo beside a large info block */
+.bk [data-density="roomy"] .card { flex-direction: row; }
+.bk [data-density="roomy"] .card-photo { width: 38%; }
+.bk [data-density="roomy"] .card-body { padding: 6mm; gap: 2.5mm; }
+.bk [data-density="roomy"] .card-name { font-size: 21pt; }
+.bk [data-density="roomy"] .card-sub { font-size: 10.5pt; }
+.bk [data-density="roomy"] .pill { font-size: 7.5pt; padding: .7mm 2.6mm; }
+.bk [data-density="roomy"] .stats { grid-template-columns: repeat(3, 1fr); gap: 2mm; }
+.bk [data-density="roomy"] .stat { padding: 2.4mm 2.6mm; }
+.bk [data-density="roomy"] .stat dt { font-size: 7pt; }
+.bk [data-density="roomy"] .stat dd { font-size: 13pt; }
+.bk [data-density="roomy"] .note { font-size: 9pt; -webkit-line-clamp: 5; }
+.bk [data-density="roomy"] .base .k { font-size: 8pt; }
+.bk [data-density="roomy"] .base .v { font-size: 15pt; }
+.bk [data-density="roomy"] .writein span { font-size: 7.5pt; }
+.bk [data-density="roomy"] .writein div { padding-bottom: 6mm; }
+.bk [data-density="roomy"] .lot { font-size: 10pt; padding: 1.4mm 3mm; }
+
+/* normal: 4–6 cards per page, photo on top */
+.bk [data-density="normal"] .card { flex-direction: column; }
+.bk [data-density="normal"] .card-photo { width: 100%; height: 34%; }
+.bk [data-density="normal"] .card-photo .noimg { font-size: 20pt; }
+.bk [data-density="normal"] .card-name { font-size: 12.5pt; }
+.bk [data-density="normal"] .card-sub { font-size: 7.5pt; }
+.bk [data-density="normal"] .pill { font-size: 5.6pt; }
+.bk [data-density="normal"] .stats { grid-template-columns: repeat(3, 1fr); }
+.bk [data-density="normal"] .stat dd { font-size: 8.5pt; }
+.bk [data-density="normal"] .note { font-size: 6.8pt; }
+.bk [data-density="normal"] .base .v { font-size: 10pt; }
+
+/* tight: 8–9 cards per page */
+.bk [data-density="tight"] .card { flex-direction: row; }
+.bk [data-density="tight"] .card-photo { width: 30%; }
+.bk [data-density="tight"] .card-photo .noimg { font-size: 13pt; }
+.bk [data-density="tight"] .card-body { padding: 2.2mm; gap: 1mm; }
+.bk [data-density="tight"] .card-name { font-size: 9.5pt; -webkit-line-clamp: 2; }
+.bk [data-density="tight"] .card-sub { font-size: 6.2pt; }
+.bk [data-density="tight"] .pill { font-size: 5pt; }
+.bk [data-density="tight"] .stats { grid-template-columns: repeat(2, 1fr); }
+.bk [data-density="tight"] .stat { padding: .8mm 1.2mm; }
+.bk [data-density="tight"] .stat dt { font-size: 5pt; }
+.bk [data-density="tight"] .stat dd { font-size: 7pt; }
+.bk [data-density="tight"] .note { display: none; }
+.bk [data-density="tight"] .base .v { font-size: 8pt; }
+.bk [data-density="tight"] .writein div { padding-bottom: 2.4mm; }
+.bk [data-density="tight"] .lot { font-size: 6pt; }
+
+/* no-photo mode reclaims the space */
+.bk .cards[data-photos="off"] .card-photo { display: none; }
+.bk .cards[data-photos="off"] .card { flex-direction: column; }
+.bk .cards[data-photos="off"] .lot {
+  position: static; border-radius: 1mm; align-self: flex-start; padding: .5mm 1.8mm;
+}
+
+/* On screen the pages are a stack of sheets; in print they are the paper itself. */
+@media screen {
+  .bk .page + .page { margin-top: 18px; }
+}
+@media print {
+  .bk .page { box-shadow: none; margin: 0; }
+}

@@ -1,0 +1,6 @@
+node_modules/
+package-lock.json
+*.tgz
+_bt.mjs
+.DS_Store
+Thumbs.db
