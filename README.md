@@ -18,6 +18,7 @@ Load an Excel or CSV file and AuctionBook gives you:
 - **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
 - **Balanced teams without an auction** — rate the players and it draws squads of near-equal strength.
 - **The registration form itself** — it writes the Google Form that collects your players.
+- **Judged competitions too** — cooking, rangoli, dance, fancy dress and more, with printable judge score sheets, a scoring workbook that ranks itself, and certificates.
 
 It also **works offline**. Everything is cached on your first visit, so it opens with no connection at all — which is what you want at a ground with no signal. On a phone, "Add to Home Screen" makes it behave like an app.
 
@@ -87,6 +88,31 @@ git add docs/booklets && git commit -m "Add auction booklet" && git push
 It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.html`.
 
 Note that anyone with the link can read it, so treat it like a public document.
+
+## Judged competitions
+
+Not every event is an auction. Pick a competition in **Columns** — cooking, rangoli, dance, singing, fancy dress, drawing, mehndi, photography, science fair, debate, flower arrangement — and the judging criteria load with it, weighted out of 100. Every criterion, weight and label stays editable.
+
+Three outputs:
+
+**Judge score sheets.** One clipboard sheet per judge, a column per criterion with its maximum printed in the header, a total column, room for remarks and a signature line. Long lists split across pages, and every page repeats the judge's name, because clipboard pages get separated.
+
+**A scoring workbook** (`.xlsx`). One tab per judge with the totals already wired up, and a Summary tab that pulls each judge's total across, averages them and ranks the field. Type the scores in and the winner falls out. Nothing needs to be typed on Summary.
+
+**Certificates.** A participation certificate for every entrant, plus three blank winner certificates at the front to fill in on the day.
+
+| Competition | Criteria |
+| --- | --- |
+| Cooking / Bake-off | Taste 40 · Presentation 25 · Creativity 20 · Hygiene 15 |
+| Rangoli / Floor art | Design 30 · Colour balance 25 · Neatness 25 · Impact 20 |
+| Dance | Choreography 30 · Rhythm 25 · Expression 25 · Costume 20 |
+| Debate / Elocution | Content 30 · Delivery 25 · Language 20 · Timing 15 · Confidence 10 |
+
+…and eight more. Nothing about the engine is competition-specific either: the criteria are just data.
+
+## Blank templates
+
+Panel 6 downloads a starting spreadsheet for any event — the right columns for that competition or sport, a clearly marked example row, and a *How to use* sheet listing the categories and judging criteria. Hand it to whoever is collecting entries.
 
 ## Drawing balanced teams instead of auctioning
 
@@ -186,6 +212,8 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/export.js` | Builds the self-contained shareable file |
 | `assets/js/liveboard.js` | Builds the live auction board |
 | `assets/js/teams.js` | Balanced team draft |
+| `assets/js/competitions.js` | Judged-competition presets and criteria |
+| `assets/js/judging.js` | Score sheets, certificates, scoring workbook, templates |
 | `assets/js/formbuilder.js` | Generates the Google Form script |
 | `sw.js` | Offline cache |
 | `assets/js/main.js` | Wires up the UI |

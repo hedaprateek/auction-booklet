@@ -9,7 +9,7 @@
 // scripts/selftest.mjs asserts this list covers every asset the page loads, so
 // a new module can't quietly break offline mode.
 
-const CACHE = 'auctionbook-v3';
+const CACHE = 'auctionbook-v4';
 
 const PRECACHE = [
   './',
@@ -26,6 +26,8 @@ const PRECACHE = [
   'assets/js/images.js',
   'assets/js/format.js',
   'assets/js/teams.js',
+  'assets/js/competitions.js',
+  'assets/js/judging.js',
   'assets/js/formbuilder.js',
   'assets/js/liveboard.js',
   'assets/js/sample-data.js',

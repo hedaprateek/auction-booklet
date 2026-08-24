@@ -125,6 +125,50 @@
 }
 .bk .rules h3:first-child { margin-top: 0; }
 
+/* ── judge score sheet ───────────────────────────────────── */
+.bk .judge-sheet { padding: 12mm; }
+.bk .js-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 6mm;
+  border-bottom: 1.2pt solid var(--accent); padding-bottom: 3mm; margin-bottom: 5mm; flex: none;
+}
+.bk .js-head h2 { margin: 0; font-family: var(--serif); font-size: 17pt; letter-spacing: -.01em; }
+.bk .js-head p { margin: 1mm 0 0; font-size: 9pt; color: var(--ink-3); }
+.bk .js-judge {
+  text-align: right; border: .8pt solid var(--line); border-radius: 1.5mm;
+  padding: 2mm 4mm; min-width: 46mm;
+}
+.bk .js-judge span {
+  display: block; font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+}
+.bk .js-judge strong { font-family: var(--serif); font-size: 12pt; }
+
+.bk .js-table { width: 100%; border-collapse: collapse; font-size: 9pt; flex: none; }
+.bk .js-table th {
+  background: var(--tint); border: .6pt solid var(--line-2, #cfc9c0);
+  padding: 2mm 1.5mm; font-size: 7.5pt; font-weight: 700; text-align: center;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); vertical-align: middle;
+}
+.bk .js-table th em {
+  display: block; font-style: normal; font-size: 6.5pt; font-weight: 400; color: var(--ink-3);
+}
+.bk .js-table td { border: .6pt solid var(--line); padding: 0; height: 9.5mm; }
+.bk .js-table .c-no { width: 10mm; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.bk .js-table .c-name { padding: 0 2mm; font-weight: 600; }
+.bk .js-table .c-cat { display: block; font-size: 7pt; font-weight: 400; color: var(--ink-3); }
+.bk .js-table .c-sc { width: 15mm; background: #fff; }
+.bk .js-table .c-tot { width: 16mm; background: var(--tint); }
+.bk .js-table .c-rem { width: 34mm; }
+.bk .js-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent) 3%, #fff); }
+.bk .js-table tbody tr:nth-child(even) .c-tot { background: var(--tint); }
+
+.bk .js-foot {
+  margin-top: auto; padding-top: 6mm; display: flex;
+  justify-content: space-between; align-items: flex-end; gap: 8mm; flex: none;
+}
+.bk .js-sign { flex: 0 0 62mm; border-top: .8pt solid var(--ink-3); padding-top: 1.5mm; }
+.bk .js-sign span { font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.bk .js-page { font-size: 7.5pt; color: var(--ink-3); text-align: right; }
+
 /* ── drafted squads sheet ────────────────────────────────── */
 .bk .draft-note { font-size: 9pt; color: var(--ink-2); margin: 0 0 5mm; }
 .bk .squads { columns: 2; column-gap: 8mm; }
@@ -310,3 +354,50 @@
 @media print {
   .bk .page { box-shadow: none; margin: 0; }
 }
+
+/* ── certificates ────────────────────────────────────────── */
+.bk .cert-page { padding: 0; }
+.bk .cert {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 16mm 20mm; position: relative;
+}
+.bk .cert::before {
+  content: ""; position: absolute; inset: 8mm;
+  border: 1.2pt solid var(--accent); border-radius: 2mm; pointer-events: none;
+}
+.bk .cert::after {
+  content: ""; position: absolute; inset: 10mm;
+  border: .5pt solid color-mix(in srgb, var(--accent) 40%, #fff);
+  border-radius: 1.5mm; pointer-events: none;
+}
+.bk .cert-rule { width: 30mm; height: 1.2mm; background: var(--accent); margin: 4mm auto; flex: none; }
+.bk .cert-rule:first-child { margin-bottom: auto; }
+.bk .cert-logo { max-height: 22mm; max-width: 50%; object-fit: contain; margin-bottom: 5mm; }
+.bk .cert-event {
+  font-family: var(--serif); font-size: 20pt; font-weight: 700;
+  letter-spacing: -.01em; line-height: 1.15;
+}
+.bk .cert-when { font-size: 9.5pt; color: var(--ink-3); margin-top: 2mm; }
+.bk .cert-kicker {
+  margin-top: 10mm; font-size: 10pt; font-weight: 700;
+  letter-spacing: .3em; text-transform: uppercase; color: var(--accent);
+}
+.bk .cert-preamble { margin-top: 9mm; font-size: 11pt; color: var(--ink-2); font-style: italic; }
+.bk .cert-name {
+  font-family: var(--serif); font-size: 30pt; font-weight: 700;
+  margin-top: 5mm; line-height: 1.1; letter-spacing: -.01em;
+}
+.bk .cert-blank {
+  width: 74%; border-bottom: .8pt solid var(--ink-3);
+  margin: 16mm auto 3mm; height: 1px;
+}
+.bk .cert-sub { font-size: 10.5pt; color: var(--ink-2); margin: 3mm 0 auto; min-height: 6mm; }
+.bk .cert-sign {
+  display: flex; gap: 20mm; width: 100%;
+  justify-content: center; padding-top: 14mm;
+}
+.bk .cert-sign div { flex: 0 0 52mm; border-top: .8pt solid var(--ink-3); padding-top: 1.5mm; }
+.bk .cert-sign span {
+  font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+}
+.bk .cert-foot { margin-top: 6mm; font-size: 8pt; color: var(--ink-3); }

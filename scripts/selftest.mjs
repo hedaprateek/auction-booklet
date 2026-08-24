@@ -9,6 +9,8 @@ import vm from 'node:vm';
 import { gridToTable } from '../assets/js/parse.js';
 import { balanceTeams, teamSpread, teamsAsText } from '../assets/js/teams.js';
 import { buildAppsScript, buildQuestionList } from '../assets/js/formbuilder.js';
+import { COMPETITIONS, getCompetition, criteriaTotal } from '../assets/js/competitions.js';
+import { getPreset } from '../assets/js/presets.js';
 import { autoMap, byRole, prettyLabel } from '../assets/js/mapping.js';
 import { normalizeImageUrl, lookupPhoto } from '../assets/js/images.js';
 import { normalize, buildBook, parseTeams, qrSvg } from '../assets/js/render.js';
@@ -317,6 +319,84 @@ console.log('\nGoogle Form generator');
   const list = buildQuestionList({ categories: ['A'], stats: ['S'], subtitles: [], priceBands: [] });
   check('question list is numbered', /^1\. Full name/m.test(list));
   check('question list carries the footer', list.includes('Stunity tech - by Prateek'));
+}
+
+console.log('\nJudged competitions');
+{
+  const require2 = createRequire(import.meta.url);
+  const rt = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  globalThis.XLSX = require2(path.join(rt, 'assets/vendor/xlsx.full.min.js'));
+  const { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTemplate, workbookBytes } =
+    await import('../assets/js/judging.js');
+
+  check('every competition totals 100',
+    COMPETITIONS.every(c => criteriaTotal(c.criteria) === 100),
+    COMPETITIONS.filter(c => criteriaTotal(c.criteria) !== 100).map(c => c.id).join(','));
+  check('every competition has categories and fields',
+    COMPETITIONS.every(c => c.categories.length && c.criteria.length && c.noun));
+
+  const comp = getCompetition('cooking');
+  const people = ['Meera R', 'Tom A', 'Divya R', 'Karan S', 'Anjali N']
+    .map((n, i) => ({ lot: String(i + 1), name: n, category: comp.categories[i % 4] }));
+  const cfg = { title: 'Diwali Cook-off', noun: 'Entry', pageSize: 'a4', theme: 'classic',
+    accent: comp.accent, judges: ['Asha Menon', 'Ravi K', 'Chef Pinto'], criteria: comp.criteria };
+
+  const sheets = buildJudgeSheets(people, cfg);
+  check('one score sheet per judge', sheets.pageCount === 3, String(sheets.pageCount));
+  check('score sheet has a column per criterion',
+    (sheets.html.match(/<th class="c-sc">/g) || []).length === 3 * comp.criteria.length);
+  check('every entrant gets a row', (sheets.html.match(/class="c-name"/g) || []).length === 15);
+  check('each judge is named on their sheet', comp.criteria.length > 0
+    && cfg.judges.every(j => sheets.html.includes(j)));
+  check('long lists split across pages',
+    buildJudgeSheets(Array.from({ length: 40 }, (_, i) =>
+      ({ lot: String(i), name: 'P' + i, category: 'X' })), { ...cfg, judges: ['A'] }).pageCount === 3);
+
+  const certs = buildCertificates(people, cfg);
+  check('certificates: 3 blank winners + one each', certs.pageCount === 3 + people.length, String(certs.pageCount));
+  check('participation certificates name the entrant', certs.html.includes('Meera R'));
+  check('winner certificates are left blank', certs.html.includes('cert-blank'));
+
+  const bytes = workbookBytes(buildScoringWorkbook(people, cfg));
+  const wb = XLSX.read(bytes, { type: 'array' });
+  check('workbook has a tab per judge plus summary',
+    wb.SheetNames.join('|') === 'Asha Menon|Ravi K|Chef Pinto|Summary|How to use', wb.SheetNames.join('|'));
+  const j1 = wb.Sheets['Asha Menon'], sum = wb.Sheets.Summary;
+  // The bug this guards: SheetJS drops formula cells that carry no cached value.
+  check('judge totals survive the write', !!j1.H2?.f, JSON.stringify(j1.H2));
+  check('total sums exactly the criteria columns', j1.H2.f === 'SUM(D2:G2)', j1.H2?.f);
+  check('summary pulls each judge tab', sum.D2?.f === "'Asha Menon'!H2", sum.D2?.f);
+  check('summary averages the judges', /AVERAGE\(D2:F2\)/.test(sum.G2?.f || ''), sum.G2?.f);
+  check('summary ranks by average', /RANK\(G2,\$G\$2:\$G\$6\)/.test(sum.H2?.f || ''), sum.H2?.f);
+  check('every row has its formulas',
+    people.every((_, i) => j1[`H${i + 2}`]?.f && sum[`G${i + 2}`]?.f && sum[`H${i + 2}`]?.f));
+  check('cross-sheet refs name real tabs',
+    Object.keys(sum).filter(k => sum[k]?.f).map(k => sum[k].f).join(' ')
+      .match(/'([^']+)'!/g).every(r => wb.SheetNames.includes(r.slice(1, -2))));
+  check('judge tab names are sheet-safe',
+    buildScoringWorkbook(people, { ...cfg, judges: ['A/B:C', 'x'.repeat(60)] })
+      .SheetNames.every(n => n.length <= 31 && !/[:\\/?*[\]]/.test(n)));
+
+  const tpl = XLSX.read(workbookBytes(buildBlankTemplate(comp)), { type: 'array' });
+  const head = XLSX.utils.sheet_to_json(tpl.Sheets.Participants, { header: 1 })[0];
+  check('template carries the competition fields',
+    comp.fields.every(f => head.includes(f)), JSON.stringify(head));
+  check('template has no base price for a judged event', !head.includes('Base Price'));
+  check('sports template does have a base price',
+    XLSX.utils.sheet_to_json(
+      XLSX.read(workbookBytes(buildBlankTemplate({ ...getPreset('cricket'), fields: [], categories: [] })),
+        { type: 'array' }).Sheets.Participants, { header: 1 })[0].includes('Base Price'));
+  check('template ships a how-to sheet', tpl.SheetNames.includes('How to use'));
+
+  // A judged sheet must still build a booklet — the two modes share the engine.
+  const rows2 = people.map(p => ({ 'Entry No': p.lot, 'Participant Name': p.name,
+    Category: p.category, 'Dish name': 'Biryani', 'Preparation time (min)': '45' }));
+  const f2 = autoMap(Object.keys(rows2[0]), rows2, 'generic');
+  const st2 = { ...SAMPLE.settings, logo: '', theme: 'classic', pageSize: 'a4', perPage: 4,
+    groupBy: 'Category', sortBy: '', sortDesc: false, showCover: true, showIndex: true,
+    writeIn: false, showPhotos: true, sequentialLots: false, sectionBreak: true, qrLink: '' };
+  const b2 = buildBook(normalize(rows2, f2, st2), st2);
+  check('a competition sheet still builds a booklet', b2.pageCount > 0 && !b2.html.includes('undefined'));
 }
 
 console.log('\nOffline cache');

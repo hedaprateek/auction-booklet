@@ -3,6 +3,8 @@ import { autoMap, prettyLabel } from './mapping.js';
 import { ROLES, PRESETS, getPreset } from './presets.js';
 import { balanceTeams, teamSpread, teamsAsText } from './teams.js';
 import { buildAppsScript, buildQuestionList, DEFAULT_FORM } from './formbuilder.js';
+import { COMPETITIONS, getCompetition, isCompetition, criteriaTotal } from './competitions.js';
+import { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTemplate, workbookBytes } from './judging.js';
 import { normalize, buildBook, buildDraftSheet, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
@@ -24,6 +26,7 @@ const DEFAULTS = {
   sequentialLots: false, sectionBreak: true,
   teamsText: '', rulesText: '', tracker: true, qrLink: '',
   ratingSource: 'manual', ratingColumn: '',
+  judges: '', noun: '', criteria: null,
 };
 
 const S = {
@@ -35,24 +38,37 @@ const S = {
   zoom: 'fit',
   book: null, players: null,
   ratings: {}, draft: null, draftSeed: 1, view: 'booklet',
+  criteria: [],
 };
 
 export const BRAND = 'Stunity tech - by Prateek';
 
 const assets = () => ({ teamLogos: S.teamLogos });
 
+/** A judged preset brings criteria; a sports preset has none. */
+const defaultCriteria = id => (getCompetition(id)?.criteria || []).map(c => ({ ...c }));
+
 /* ── boot ───────────────────────────────────────────────────────────────── */
 
 function boot() {
-  $('#preset-select').innerHTML = PRESETS.map(p =>
-    `<option value="${p.id}">${p.label}</option>`).join('');
+  $('#preset-select').innerHTML =
+    '<optgroup label="Sports auctions">'
+    + PRESETS.map(p => `<option value="${p.id}">${esc(p.label)}</option>`).join('')
+    + '</optgroup><optgroup label="Judged competitions">'
+    + COMPETITIONS.map(c => `<option value="${c.id}">${esc(c.label)}</option>`).join('')
+    + '</optgroup>';
 
   restoreSettings();
+  S.criteria = S.settings.criteria || defaultCriteria(S.settings.preset);
+  $('#j-judges').value = S.settings.judges || '';
+  renderCriteria();
   bindData();
   bindSettings();
   bindActions();
   bindZoom();
   bindDraft();
+  bindJudging();
+  bindTemplates();
   bindForm();
   registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
@@ -174,7 +190,7 @@ function reparse(remap) {
   }
   renderMapList();
   fillColumnSelects();
-  $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project, #btn-liveboard, #d-make, #d-shuffle')
+  $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project, #btn-liveboard, #d-make, #d-shuffle, #j-sheets, #j-workbook, #j-certs')
     .forEach(b => { b.disabled = rows.length === 0; });
   refresh();
 }
@@ -272,7 +288,19 @@ function bindSettings() {
 
   $('#preset-select').addEventListener('change', e => {
     S.settings.preset = e.target.value;
-    const p = getPreset(e.target.value);
+
+    // A judged competition brings its own criteria, vocabulary and colour.
+    const comp = getCompetition(e.target.value);
+    if (comp) {
+      S.criteria = comp.criteria.map(c => ({ ...c }));
+      S.settings.noun = comp.noun;
+      S.settings.criteria = S.criteria;
+      renderCriteria();
+      $('#panel-judge').open = true;
+      toast(`${comp.label}: ${comp.criteria.length} criteria loaded. Edit them in Judging.`);
+    }
+
+    const p = comp || getPreset(e.target.value);
     S.settings.accent = p.accent;
     $('#s-accent').value = p.accent;
     document.documentElement.style.setProperty('--accent', p.accent);
@@ -337,7 +365,15 @@ function render() {
 
   S.players = normalize(S.rows, S.fields, S.settings, S.photoIndex);
 
-  if (S.view === 'draft' && S.draft) {
+  if (S.view === 'judge') {
+    S.book = buildJudgeSheets(S.players, judgeConfig());
+    const n = judgeConfig().judges.length || 1;
+    $('#page-count').textContent =
+      `${S.book.pageCount} sheet${S.book.pageCount === 1 ? '' : 's'} · ${n} judge${n === 1 ? '' : 's'}`;
+  } else if (S.view === 'certs') {
+    S.book = buildCertificates(S.players, judgeConfig());
+    $('#page-count').textContent = `${S.book.pageCount} certificates`;
+  } else if (S.view === 'draft' && S.draft) {
     S.book = buildDraftSheet(S.draft, S.settings, { ratingOf, spread: teamSpread(S.draft) });
     $('#page-count').textContent = `${S.draft.length} teams · ${S.players.length} players`;
   } else {
@@ -358,7 +394,7 @@ function render() {
 
   // These depend on S.players, which only exists once the booklet has been
   // built — so they belong here rather than in reparse().
-  if (S.view !== 'draft') renderRatings();
+  if (S.view === 'booklet') renderRatings();
   seedFormFromData();
 }
 
@@ -388,7 +424,116 @@ function applyZoom() {
   $('#zoom-label').textContent = S.zoom === 'fit' ? 'Fit' : `${Math.round(scale * 100)}%`;
 }
 
-/* ── 5 · draft teams (no auction) ───────────────────────────────────────── */
+/* ── 5 · judging ────────────────────────────────────────────────────────── */
+
+function judgeConfig() {
+  return {
+    ...S.settings,
+    noun: S.settings.noun || 'Participant',
+    judges: $('#j-judges').value.split('\n').map(s => s.trim()).filter(Boolean),
+    criteria: S.criteria,
+  };
+}
+
+function bindJudging() {
+  $('#j-judges').addEventListener('input', () => { S.settings.judges = $('#j-judges').value; persistSettings(); });
+
+  $('#j-criteria').addEventListener('input', e => {
+    const i = e.target.dataset.i;
+    if (i == null) return;
+    S.criteria[i][e.target.dataset.k] = e.target.dataset.k === 'max'
+      ? Number(e.target.value) || 0 : e.target.value;
+    updateCriteriaTotal();
+  });
+  $('#j-criteria').addEventListener('click', e => {
+    const i = e.target.dataset.del;
+    if (i == null) return;
+    S.criteria.splice(Number(i), 1);
+    renderCriteria();
+  });
+  $('#j-add').addEventListener('click', () => {
+    S.criteria.push({ name: 'New criterion', max: 10 });
+    renderCriteria();
+  });
+
+  $('#j-sheets').addEventListener('click', () => showView('judge'));
+  $('#j-certs').addEventListener('click', () => showView('certs'));
+  $('#j-workbook').addEventListener('click', () => {
+    if (!S.players?.length) return;
+    const wb = buildScoringWorkbook(S.players, judgeConfig());
+    download(`${slug(S.settings.title || 'competition')}-scoring.xlsx`,
+      workbookBytes(wb), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const n = judgeConfig().judges.length || 1;
+    toast(`Workbook downloaded — ${n} judge tab${n === 1 ? '' : 's'} plus a summary that ranks itself.`);
+  });
+}
+
+function renderCriteria() {
+  $('#j-criteria').innerHTML = S.criteria.map((c, i) => `
+    <div class="maprow">
+      <input type="text" data-i="${i}" data-k="name" value="${esc(c.name).replace(/"/g, '&quot;')}">
+      <input type="number" data-i="${i}" data-k="max" min="1" max="100" value="${c.max}">
+      <button class="btn btn-icon" data-del="${i}" title="Remove">×</button>
+    </div>`).join('');
+  updateCriteriaTotal();
+  S.settings.criteria = S.criteria;
+  persistSettings();
+}
+
+function updateCriteriaTotal() {
+  const t = criteriaTotal(S.criteria);
+  $('#j-total').innerHTML = t === 100
+    ? `Total <strong>${t}</strong> — judges mark each entry out of 100.`
+    : `Total <strong>${t}</strong>. Most events add up to 100, but any total works — the sheets and workbook follow whatever you set.`;
+}
+
+function showView(view) {
+  S.view = view;
+  $('#view-tabs').hidden = false;
+  $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === view));
+  render();
+}
+
+/* ── 6 · blank templates ────────────────────────────────────────────────── */
+
+function bindTemplates() {
+  const opts = [
+    '<optgroup label="Judged competitions">',
+    ...COMPETITIONS.map(c => `<option value="c:${c.id}">${esc(c.label)}</option>`),
+    '</optgroup><optgroup label="Sports auctions">',
+    ...PRESETS.map(p => `<option value="p:${p.id}">${esc(p.label)}</option>`),
+    '</optgroup>',
+  ].join('');
+  $('#t-pick').innerHTML = opts;
+  $('#t-pick').addEventListener('change', describeTemplate);
+  describeTemplate();
+
+  $('#t-download').addEventListener('click', () => {
+    const comp = pickedTemplate();
+    download(`${slug(comp.label)}-template.xlsx`,
+      workbookBytes(buildBlankTemplate(comp)),
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast(`${comp.label} template downloaded.`);
+  });
+}
+
+function pickedTemplate() {
+  const v = $('#t-pick').value;
+  const id = v.slice(2);
+  return v.startsWith('c:')
+    ? getCompetition(id)
+    : { ...getPreset(id), fields: [], categories: [] };
+}
+
+function describeTemplate() {
+  const c = pickedTemplate();
+  $('#t-about').innerHTML = c.criteria
+    ? `Columns for ${esc(c.label.toLowerCase())}, plus a sheet listing the judging criteria — ${
+      c.criteria.map(x => `${esc(x.name)} ${x.max}`).join(', ')}.`
+    : `Columns for ${esc(c.label.toLowerCase())}, including a base price for the auction.`;
+}
+
+/* ── 7 · draft teams (no auction) ───────────────────────────────────────── */
 
 const ratingKey = p => p.lot + '|' + p.name;
 const scaleMax = () => Number($('#d-scale').value) || 10;
@@ -607,6 +752,7 @@ function saveProject() {
     photos: [...S.photoIndex.entries()],
     teamLogos: [...S.teamLogos.entries()],
     ratings: S.ratings,
+    criteria: S.criteria,
   };
   download(`${slug(S.settings.title || 'auction')}.auctionbook.json`,
     JSON.stringify(project), 'application/json');
@@ -630,6 +776,8 @@ function openProject() {
       S.photoIndex = new Map(p.photos || []);
       S.teamLogos = new Map(p.teamLogos || []);
       S.ratings = p.ratings || {};
+      S.criteria = p.criteria || defaultCriteria(S.settings.preset);
+      renderCriteria();
       writeSettingsToForm();
       fillColumnSelects();
       renderMapList();

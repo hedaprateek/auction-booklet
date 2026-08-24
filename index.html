@@ -166,8 +166,40 @@
       </div>
     </details>
 
+    <details class="panel" id="panel-judge">
+      <summary>5 · Judging <span class="badge-count">competitions</span></summary>
+      <div class="panel-body">
+        <p class="hint">For events that are judged rather than auctioned — cooking, rangoli, dance, fancy dress. Pick a competition in <strong>Columns</strong> and the criteria below fill in.</p>
+        <label class="field">
+          <span>Judges <em>(one per line)</em></span>
+          <textarea id="j-judges" rows="3" placeholder="Asha Menon&#10;Ravi Kumar&#10;Chef Pinto"></textarea>
+        </label>
+        <div class="maplist-head"><span>Criterion</span><span>Out of</span><span></span></div>
+        <div id="j-criteria" class="maplist"></div>
+        <button id="j-add" class="btn btn-block">Add a criterion</button>
+        <p class="hint" id="j-total"></p>
+
+        <div class="divider"></div>
+        <button id="j-sheets" class="btn btn-primary btn-block" disabled>Show judge score sheets</button>
+        <button id="j-workbook" class="btn btn-block" disabled>Download scoring workbook <code>.xlsx</code></button>
+        <p class="hint">One tab per judge with the totals already wired up, plus a summary that averages the judges and ranks the entries. Type the scores in and the winner falls out.</p>
+        <button id="j-certs" class="btn btn-block" disabled>Show certificates</button>
+        <p class="hint">Winner and participation certificates, one per page, ready to print.</p>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-templates">
+      <summary>6 · Blank templates</summary>
+      <div class="panel-body">
+        <p class="hint">Starting spreadsheets with the right columns for each event, plus a “how to use” sheet. Hand one to whoever is collecting entries.</p>
+        <label class="field"><span>Template for</span><select id="t-pick"></select></label>
+        <button id="t-download" class="btn btn-primary btn-block">Download the template</button>
+        <p class="hint" id="t-about"></p>
+      </div>
+    </details>
+
     <details class="panel" id="panel-draft">
-      <summary>5 · Draft teams <span class="badge-count">no auction</span></summary>
+      <summary>7 · Draft teams <span class="badge-count">no auction</span></summary>
       <div class="panel-body">
         <p class="hint">Not running an auction? Rate each player, and AuctionBook draws squads of near-equal strength — sizes within one, categories spread evenly.</p>
         <label class="field">
@@ -206,7 +238,7 @@
     </details>
 
     <details class="panel" id="panel-form">
-      <summary>6 · Registration form</summary>
+      <summary>8 · Registration form</summary>
       <div class="panel-body">
         <p class="hint">Build the Google Form that collects your players. AuctionBook writes a script; Google creates the form in your own Drive. Nothing passes through us, and the questions are worded so the responses load back with no remapping.</p>
         <label class="field"><span>Form title</span><input type="text" id="f-title" placeholder="Riverside Premier League — Player Registration"></label>
@@ -240,7 +272,7 @@
     </details>
 
     <details class="panel" id="panel-share">
-      <summary>7 · Share</summary>
+      <summary>9 · Share</summary>
       <div class="panel-body">
         <label class="field">
           <span>Link for the cover QR code</span>
@@ -273,6 +305,8 @@
       <div class="view-tabs" id="view-tabs" hidden>
         <button data-view="booklet" class="on">Booklet</button>
         <button data-view="draft">Teams</button>
+        <button data-view="judge">Judging</button>
+        <button data-view="certs">Certificates</button>
       </div>
       <span id="page-count" class="muted">No booklet yet</span>
       <div class="zoom">
