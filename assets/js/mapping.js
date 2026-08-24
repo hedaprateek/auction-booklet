@@ -19,6 +19,7 @@ const RULES = [
   ['id',        /^(s\.?\s*no|sr\.?\s*no|serial|lot(\s*(no|number))?|#|id|player id|reg(n|istration)? ?(no)?)\b/i, 90],
   ['basePrice', /(base\s*(price|value|bid)|reserve\s*price|starting\s*(price|bid)|min(imum)? ?price)/i, 95],
   ['basePrice', /^(price|value|cost|amount|bid)$/i,                                   50],
+  ['rating',    /\b(rating|overall|skill ?level|player ?rating|stars?)\b/i,                   88],
   ['category',  /(categor|player\s*type|^type$|^set$|^group$|^grade$|^tier$|division|pool)/i, 90],
   ['category',  /(role|position|speciali[sz]ation|skill)/i,                           60],
   ['team',      /(team|club|franchise|squad|department|company|college|school|village|previous team)/i, 70],

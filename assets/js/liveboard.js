@@ -75,6 +75,7 @@ ${players.map(p => row(p, teams, settings)).join('\n')}
 
 <footer class="foot">
   <span>${esc(settings.footer || '')}</span>
+  <span>Stunity tech - by Prateek</span>
   <artifact-local><span class="hint" id="hint"></span></artifact-local>
 </footer>
 

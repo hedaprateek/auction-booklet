@@ -6,6 +6,8 @@
 <title>AuctionBook — Sports Auction Booklet Builder</title>
 <meta name="description" content="Turn a spreadsheet of players into a print-ready auction booklet. Works entirely in your browser — no data ever leaves your device.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#c2410c">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/booklet.css">
 </head>
@@ -164,8 +166,81 @@
       </div>
     </details>
 
+    <details class="panel" id="panel-draft">
+      <summary>5 · Draft teams <span class="badge-count">no auction</span></summary>
+      <div class="panel-body">
+        <p class="hint">Not running an auction? Rate each player, and AuctionBook draws squads of near-equal strength — sizes within one, categories spread evenly.</p>
+        <label class="field">
+          <span>Ratings come from</span>
+          <select id="d-source">
+            <option value="manual">Rating them here</option>
+            <option value="column">A column in my sheet</option>
+          </select>
+        </label>
+        <label class="field" id="d-col-wrap" hidden><span>Rating column</span><select id="d-column"></select></label>
+
+        <div id="d-manual">
+          <div class="rate-head">
+            <input type="search" id="d-search" placeholder="Find a player…">
+            <button class="btn" id="d-reset-ratings" title="Set every player back to the middle">Reset</button>
+          </div>
+          <div id="d-ratings" class="ratings"></div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="row2">
+          <label class="field"><span>How many teams</span><input type="number" id="d-count" min="2" max="20" value="4"></label>
+          <label class="field"><span>Scale</span>
+            <select id="d-scale"><option value="10">1 – 10</option><option value="5">1 – 5</option><option value="100">1 – 100</option></select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="d-bycat" checked> Spread each category evenly across teams</label>
+        <label class="check"><input type="checkbox" id="d-usenames" checked> Use the team names from panel 4</label>
+
+        <button id="d-make" class="btn btn-primary btn-block" disabled>Draw the teams</button>
+        <button id="d-shuffle" class="btn btn-block" disabled>Shuffle again</button>
+        <div id="d-result" class="draft-result"></div>
+        <button id="d-copy" class="btn btn-block" disabled>Copy for WhatsApp</button>
+        <p class="hint">Balanced, not identical — a redraw gives a different fair split, so nobody can say the teams were picked.</p>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-form">
+      <summary>6 · Registration form</summary>
+      <div class="panel-body">
+        <p class="hint">Build the Google Form that collects your players. AuctionBook writes a script; Google creates the form in your own Drive. Nothing passes through us, and the questions are worded so the responses load back with no remapping.</p>
+        <label class="field"><span>Form title</span><input type="text" id="f-title" placeholder="Riverside Premier League — Player Registration"></label>
+        <label class="field"><span>Auction date &amp; venue</span><input type="text" id="f-event" placeholder="Sunday 14 March, Riverside Ground"></label>
+        <div class="row2">
+          <label class="field"><span>Entry fee</span><input type="text" id="f-fee" placeholder="₹500"></label>
+          <label class="field"><span>Registration closes</span><input type="text" id="f-closes" placeholder="7 March"></label>
+        </div>
+        <label class="field"><span>Categories <em>(one per line)</em></span><textarea id="f-cats" rows="4"></textarea></label>
+        <label class="field"><span>Base price options <em>(one per line)</em></span><textarea id="f-bands" rows="3"></textarea></label>
+        <label class="field"><span>Stat questions <em>(one per line)</em></span><textarea id="f-stats" rows="4"></textarea></label>
+        <label class="field"><span>Extra details <em>(one per line)</em></span><textarea id="f-subs" rows="2"></textarea></label>
+        <label class="check"><input type="checkbox" id="f-phone" checked> Ask for a mobile number <em>&nbsp;(never printed)</em></label>
+        <label class="check"><input type="checkbox" id="f-photo" checked> Ask for a photo</label>
+        <label class="check"><input type="checkbox" id="f-note" checked> Ask “anything owners should know?”</label>
+        <label class="check"><input type="checkbox" id="f-email" checked> Collect email addresses</label>
+        <label class="check"><input type="checkbox" id="f-limit"> Limit to one response per person</label>
+
+        <div class="divider"></div>
+        <button id="f-copy" class="btn btn-primary btn-block">Copy the script</button>
+        <button id="f-download" class="btn btn-block">Download <code>.gs</code> file</button>
+        <button id="f-list" class="btn btn-block">Copy a plain question list</button>
+        <ol class="howto">
+          <li>Open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> → <strong>New project</strong>.</li>
+          <li>Delete what's there, paste the script, press <strong>Run</strong>.</li>
+          <li>Approve the permission prompt — it's asking to make a form in <em>your</em> Drive.</li>
+          <li>Open <strong>View → Logs</strong> for the link to send your players.</li>
+        </ol>
+        <p class="hint">Prefer clicking it together by hand? Use the plain question list instead. Either way, see the <a href="https://github.com/hedaprateek/auction-booklet/blob/main/docs/GOOGLE-FORMS.md" target="_blank" rel="noopener">full guide</a> — especially the bit about getting photos out of Drive.</p>
+      </div>
+    </details>
+
     <details class="panel" id="panel-share">
-      <summary>5 · Share</summary>
+      <summary>7 · Share</summary>
       <div class="panel-body">
         <label class="field">
           <span>Link for the cover QR code</span>
@@ -188,12 +263,17 @@
 
     <footer class="sidebar-foot">
       <a href="https://github.com/hedaprateek/auction-booklet" target="_blank" rel="noopener">Source on GitHub</a>
+      <span class="foot-brand">Stunity tech - by Prateek</span>
     </footer>
   </aside>
 
   <!-- ───────────────────────── preview ───────────────────────── -->
   <section class="preview-wrap">
     <div class="preview-bar">
+      <div class="view-tabs" id="view-tabs" hidden>
+        <button data-view="booklet" class="on">Booklet</button>
+        <button data-view="draft">Teams</button>
+      </div>
       <span id="page-count" class="muted">No booklet yet</span>
       <div class="zoom">
         <button class="btn btn-icon" id="zoom-out" title="Zoom out">−</button>

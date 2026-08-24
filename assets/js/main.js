@@ -1,10 +1,13 @@
-import { readWorkbook, sheetGrid, gridToTable } from './parse.js';
+import { readWorkbook, sheetGrid, gridToTable, toNumber } from './parse.js';
 import { autoMap, prettyLabel } from './mapping.js';
 import { ROLES, PRESETS, getPreset } from './presets.js';
-import { normalize, buildBook, parseTeams } from './render.js';
+import { balanceTeams, teamSpread, teamsAsText } from './teams.js';
+import { buildAppsScript, buildQuestionList, DEFAULT_FORM } from './formbuilder.js';
+import { normalize, buildBook, buildDraftSheet, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
 import { buildLiveBoard } from './liveboard.js';
+import { esc } from './format.js';
 import { SAMPLE } from './sample-data.js';
 
 const $ = s => document.querySelector(s);
@@ -20,6 +23,7 @@ const DEFAULTS = {
   showCover: true, showIndex: true, writeIn: true, showPhotos: true,
   sequentialLots: false, sectionBreak: true,
   teamsText: '', rulesText: '', tracker: true, qrLink: '',
+  ratingSource: 'manual', ratingColumn: '',
 };
 
 const S = {
@@ -30,7 +34,10 @@ const S = {
   settings: { ...DEFAULTS },
   zoom: 'fit',
   book: null, players: null,
+  ratings: {}, draft: null, draftSeed: 1, view: 'booklet',
 };
+
+export const BRAND = 'Stunity tech - by Prateek';
 
 const assets = () => ({ teamLogos: S.teamLogos });
 
@@ -45,6 +52,9 @@ function boot() {
   bindSettings();
   bindActions();
   bindZoom();
+  bindDraft();
+  bindForm();
+  registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
 }
 
@@ -164,7 +174,7 @@ function reparse(remap) {
   }
   renderMapList();
   fillColumnSelects();
-  $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project, #btn-liveboard')
+  $$('#btn-print, #btn-print-2, #btn-export, #btn-export-2, #btn-save-project, #btn-liveboard, #d-make, #d-shuffle')
     .forEach(b => { b.disabled = rows.length === 0; });
   refresh();
 }
@@ -212,11 +222,23 @@ function fillColumnSelects() {
     const f = S.fields.find(x => x.key === h);
     return `<option value="${h}">${f ? f.label : h}</option>`;
   }).join('');
-  const g = $('#s-groupby'), s = $('#s-sortby');
+  const g = $('#s-groupby'), s = $('#s-sortby'), r = $('#d-column');
   g.innerHTML = `<option value="">No sections</option>${opts}`;
   s.innerHTML = `<option value="">Spreadsheet order</option>${opts}`;
   g.value = S.settings.groupBy || '';
   s.value = S.settings.sortBy || '';
+
+  // A column already mapped as Rating is the obvious default.
+  const rated = S.fields.find(f => f.role === 'rating');
+  r.innerHTML = opts;
+  if (rated) {
+    S.settings.ratingColumn ||= rated.key;
+    if (S.settings.ratingSource === 'manual') S.settings.ratingSource = 'column';
+  }
+  r.value = S.settings.ratingColumn || '';
+  $('#d-source').value = S.settings.ratingSource;
+  $('#d-col-wrap').hidden = S.settings.ratingSource !== 'column';
+  $('#d-manual').hidden = S.settings.ratingSource === 'column';
 }
 
 /* ── 3 · settings ───────────────────────────────────────────────────────── */
@@ -314,10 +336,16 @@ function render() {
   $('#empty-state').classList.add('hidden');
 
   S.players = normalize(S.rows, S.fields, S.settings, S.photoIndex);
-  S.book = buildBook(S.players, S.settings, assets());
+
+  if (S.view === 'draft' && S.draft) {
+    S.book = buildDraftSheet(S.draft, S.settings, { ratingOf, spread: teamSpread(S.draft) });
+    $('#page-count').textContent = `${S.draft.length} teams · ${S.players.length} players`;
+  } else {
+    S.book = buildBook(S.players, S.settings, assets());
+    $('#page-count').textContent =
+      `${S.book.pageCount} page${S.book.pageCount === 1 ? '' : 's'} · ${S.players.length} players`;
+  }
   $('#preview').innerHTML = S.book.html;
-  $('#page-count').textContent =
-    `${S.book.pageCount} page${S.book.pageCount === 1 ? '' : 's'} · ${S.players.length} players`;
 
   let ps = document.getElementById('print-style');
   if (!ps) {
@@ -327,6 +355,11 @@ function render() {
   }
   ps.textContent = `@page { size: ${S.book.pageSizeCss}; margin: 0; }`;
   applyZoom();
+
+  // These depend on S.players, which only exists once the booklet has been
+  // built — so they belong here rather than in reparse().
+  if (S.view !== 'draft') renderRatings();
+  seedFormFromData();
 }
 
 function bindZoom() {
@@ -353,6 +386,169 @@ function applyZoom() {
   bk.style.transform = `scale(${scale})`;
   bk.style.height = `${bk.scrollHeight * scale}px`;
   $('#zoom-label').textContent = S.zoom === 'fit' ? 'Fit' : `${Math.round(scale * 100)}%`;
+}
+
+/* ── 5 · draft teams (no auction) ───────────────────────────────────────── */
+
+const ratingKey = p => p.lot + '|' + p.name;
+const scaleMax = () => Number($('#d-scale').value) || 10;
+
+function ratingOf(p) {
+  if (S.settings.ratingSource === 'column' && S.settings.ratingColumn) {
+    const n = toNumber(p.row[S.settings.ratingColumn]);
+    if (n != null) return n;
+  }
+  const r = S.ratings[ratingKey(p)];
+  return r == null ? Math.round(scaleMax() / 2) : r;
+}
+
+function bindDraft() {
+  $('#d-source').addEventListener('change', e => {
+    S.settings.ratingSource = e.target.value;
+    $('#d-col-wrap').hidden = e.target.value !== 'column';
+    $('#d-manual').hidden = e.target.value === 'column';
+    persistSettings();
+    renderRatings();
+  });
+  $('#d-column').addEventListener('change', e => { S.settings.ratingColumn = e.target.value; persistSettings(); });
+  $('#d-scale').addEventListener('change', () => { S.ratings = {}; renderRatings(); });
+  $('#d-search').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    $$('#d-ratings .rate-row').forEach(r => { r.hidden = !!q && !r.dataset.find.includes(q); });
+  });
+  $('#d-reset-ratings').addEventListener('click', () => { S.ratings = {}; renderRatings(); });
+
+  $('#d-ratings').addEventListener('input', e => {
+    const row = e.target.closest('.rate-row');
+    if (!row) return;
+    S.ratings[row.dataset.key] = Number(e.target.value);
+    row.querySelector('.val').textContent = e.target.value;
+  });
+
+  $('#d-make').addEventListener('click', () => { S.draftSeed = (S.draftSeed || 1); drawTeams(); });
+  $('#d-shuffle').addEventListener('click', () => { S.draftSeed = (S.draftSeed || 1) + 1; drawTeams(); });
+  $('#d-copy').addEventListener('click', async () => {
+    if (!S.draft) return;
+    const text = teamsAsText(S.draft, { title: S.settings.title, ratingOf, showRatings: true })
+      + `\n\n${BRAND}`;
+    await copy(text, 'Teams copied — paste them straight into WhatsApp.');
+  });
+
+  $('#view-tabs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-view]');
+    if (!b) return;
+    S.view = b.dataset.view;
+    $$('#view-tabs button').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  });
+}
+
+function renderRatings() {
+  if (!S.players) return;
+  const max = scaleMax();
+  $('#d-ratings').innerHTML = S.players.map(p => {
+    const v = S.ratings[ratingKey(p)] ?? Math.round(max / 2);
+    return `<div class="rate-row" data-key="${esc(ratingKey(p))}" data-find="${esc((p.name + ' ' + p.category).toLowerCase())}">
+      <span class="who"><span class="nm">${esc(p.name)}</span>
+        <span class="ct">${esc(p.category === 'All Players' ? '' : p.category)}</span></span>
+      <input type="range" min="1" max="${max}" step="1" value="${v}">
+      <span class="val">${v}</span>
+    </div>`;
+  }).join('');
+}
+
+function drawTeams() {
+  if (!S.players?.length) return;
+  const names = $('#d-usenames').checked ? parseTeams(S.settings.teamsText).map(t => t.name) : [];
+  S.draft = balanceTeams(S.players, {
+    teamCount: Number($('#d-count').value) || 4,
+    teamNames: names,
+    ratingOf,
+    groupOf: p => p.category,
+    byCategory: $('#d-bycat').checked,
+    seed: S.draftSeed,
+  });
+  const sp = teamSpread(S.draft);
+  $('#d-result').innerHTML = S.draft.map(t =>
+    `<div class="row"><span>${esc(t.name)}</span><b>${t.players.length} · avg ${t.average}</b></div>`).join('')
+    + `<p class="fair">Strongest and weakest squad are <strong>${sp.averageGap}</strong> apart on average rating.
+       Shuffle again for a different fair draw.</p>`;
+  $('#d-copy').disabled = false;
+  $('#view-tabs').hidden = false;
+  S.view = 'draft';
+  $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === 'draft'));
+  render();
+  toast(`Drew ${S.draft.length} teams.`);
+}
+
+/* ── 6 · registration form ──────────────────────────────────────────────── */
+
+const FORM_FIELDS = [
+  ['#f-title', 'title'], ['#f-event', 'eventLine'], ['#f-fee', 'fee'], ['#f-closes', 'closes'],
+];
+const FORM_LISTS = [['#f-cats', 'categories'], ['#f-bands', 'priceBands'],
+  ['#f-stats', 'stats'], ['#f-subs', 'subtitles']];
+const FORM_FLAGS = [['#f-phone', 'askPhone'], ['#f-photo', 'askPhoto'], ['#f-note', 'askNote'],
+  ['#f-email', 'collectEmail'], ['#f-limit', 'limitOne']];
+
+function formConfig() {
+  const c = { ...DEFAULT_FORM, currency: S.settings.currency };
+  for (const [sel, k] of FORM_FIELDS) c[k] = $(sel).value.trim();
+  for (const [sel, k] of FORM_LISTS) {
+    c[k] = $(sel).value.split('\n').map(s => s.trim()).filter(Boolean);
+  }
+  for (const [sel, k] of FORM_FLAGS) c[k] = $(sel).checked;
+  if (!c.title) c.title = (S.settings.title || 'Player') + ' — Registration';
+  return c;
+}
+
+function bindForm() {
+  // Seed from the sport preset, and from the loaded sheet if there is one.
+  seedFormFromData();
+  $('#preset-select').addEventListener('change', () => setTimeout(seedFormFromData, 0));
+
+  $('#f-copy').addEventListener('click', () =>
+    copy(buildAppsScript(formConfig()), 'Script copied. Paste it into script.google.com and press Run.'));
+  $('#f-list').addEventListener('click', () =>
+    copy(buildQuestionList(formConfig()), 'Question list copied.'));
+  $('#f-download').addEventListener('click', () => {
+    const c = formConfig();
+    download(`${slug(c.title)}.gs`, buildAppsScript(c), 'text/plain');
+    toast('Script downloaded. Open script.google.com and paste it in.');
+  });
+}
+
+function seedFormFromData() {
+  const preset = getPreset(S.settings.preset);
+  const set = (sel, arr) => { if (!$(sel).value.trim()) $(sel).value = arr.join('\n'); };
+
+  // Categories and stats from the sheet if it's loaded; otherwise the preset.
+  let cats = [], stats = [];
+  if (S.players?.length && S.settings.groupBy) {
+    cats = [...new Set(S.players.map(p => String(p.row[S.settings.groupBy] || '').trim()).filter(Boolean))];
+  }
+  if (S.fields?.length) {
+    stats = S.fields.filter(f => f.role === 'stat').map(f => f.label).slice(0, 6);
+  }
+  set('#f-cats', cats.length ? cats : DEFAULT_FORM.categories);
+  set('#f-stats', stats.length ? stats : (preset.stats.length
+    ? preset.stats.slice(0, 5).map(s => s.replace(/\b\w/g, c => c.toUpperCase()))
+    : DEFAULT_FORM.stats));
+  set('#f-bands', DEFAULT_FORM.priceBands);
+  set('#f-subs', DEFAULT_FORM.subtitles);
+  if (!$('#f-title').value && S.settings.title) $('#f-title').value = `${S.settings.title} — Player Registration`;
+  if (!$('#f-event').value && S.settings.subtitle) $('#f-event').value = S.settings.subtitle;
+}
+
+async function copy(text, okMsg) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(okMsg);
+  } catch {
+    // Clipboard needs a secure context; fall back to a file so nothing is lost.
+    download('auctionbook.txt', text, 'text/plain');
+    toast('Clipboard unavailable here — downloaded it as a file instead.');
+  }
 }
 
 /* ── actions ────────────────────────────────────────────────────────────── */
@@ -410,6 +606,7 @@ function saveProject() {
     rows: S.rows,
     photos: [...S.photoIndex.entries()],
     teamLogos: [...S.teamLogos.entries()],
+    ratings: S.ratings,
   };
   download(`${slug(S.settings.title || 'auction')}.auctionbook.json`,
     JSON.stringify(project), 'application/json');
@@ -432,6 +629,7 @@ function openProject() {
       S.rows = p.rows;
       S.photoIndex = new Map(p.photos || []);
       S.teamLogos = new Map(p.teamLogos || []);
+      S.ratings = p.ratings || {};
       writeSettingsToForm();
       fillColumnSelects();
       renderMapList();
@@ -447,6 +645,22 @@ function openProject() {
     }
   };
   inp.click();
+}
+
+/* ── offline ────────────────────────────────────────────────────────────── */
+
+/**
+ * The whole tool is static, so it can be made to work with no connection at
+ * all — useful at a ground with no signal on auction day.
+ */
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol === 'file:') return;         // no SW without a server
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('Offline support unavailable:', err.message);
+    });
+  });
 }
 
 /* ── utilities ──────────────────────────────────────────────────────────── */

@@ -125,6 +125,28 @@
 }
 .bk .rules h3:first-child { margin-top: 0; }
 
+/* ── drafted squads sheet ────────────────────────────────── */
+.bk .draft-note { font-size: 9pt; color: var(--ink-2); margin: 0 0 5mm; }
+.bk .squads { columns: 2; column-gap: 8mm; }
+.bk .squad { break-inside: avoid; page-break-inside: avoid; margin-bottom: 6mm; }
+.bk .squad-head {
+  display: flex; align-items: baseline; gap: 3mm;
+  border-bottom: 1pt solid var(--accent); padding-bottom: 1.6mm; margin-bottom: 2mm;
+}
+.bk .squad-head h3 { margin: 0; font-family: var(--serif); font-size: 12.5pt; }
+.bk .squad-head .m {
+  margin-left: auto; font-size: 7.5pt; color: var(--ink-3);
+  letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+}
+.bk .squad-head .m b { color: var(--accent); font-size: 9pt; letter-spacing: 0; }
+.bk .squad table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+.bk .squad td { padding: 1.1mm 1.5mm; border-bottom: .5pt solid var(--line); }
+.bk .squad td.n { width: 6mm; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.bk .squad td.p { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; width: 10mm; }
+.bk .sq-cat { color: var(--ink-3); font-size: 7.5pt; }
+.bk .draft-foot { margin-top: 6mm; padding-top: 3mm; border-top: .6pt solid var(--line);
+  font-size: 7.5pt; color: var(--ink-3); }
+
 /* ── section divider band ────────────────────────────────── */
 .bk .sband {
   background: var(--accent); color: #fff; padding: 3mm 4mm; border-radius: 1.5mm;

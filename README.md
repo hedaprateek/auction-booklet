@@ -16,6 +16,10 @@ Load an Excel or CSV file and AuctionBook gives you:
 - **A shareable file** — one self-contained `.html` you can send on WhatsApp or email. It opens offline on any phone or laptop, with search, category filters, and every photo embedded.
 - **A live auction tracker** (optional, inside the shared file) — mark players sold or unsold, assign them to teams, and watch each team's purse count down. Then print the **final squads** sheet or export the results as CSV.
 - **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
+- **Balanced teams without an auction** — rate the players and it draws squads of near-equal strength.
+- **The registration form itself** — it writes the Google Form that collects your players.
+
+It also **works offline**. Everything is cached on your first visit, so it opens with no connection at all — which is what you want at a ground with no signal. On a phone, "Add to Home Screen" makes it behave like an app.
 
 Everything runs in the browser. Your player list is never uploaded anywhere — there is no server to upload it to.
 
@@ -84,6 +88,37 @@ It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.ht
 
 Note that anyone with the link can read it, so treat it like a public document.
 
+## Drawing balanced teams instead of auctioning
+
+Plenty of leagues never hold an auction — someone just picks teams, and someone always complains. Panel 5 does it defensibly.
+
+Rate each player on a slider (1–10, 1–5 or 1–100), or map a rating column from your sheet. Then **Draw the teams**:
+
+- Squad sizes end up within one of each other.
+- Each category is spread evenly, so no side takes all the keepers.
+- Team strengths are matched — the tool reports how far apart the strongest and weakest sides are, so you can show the room.
+- **Shuffle again** gives a different, equally fair draw. Balanced, not identical: nobody can say the teams were picked.
+
+Results print on the same paper as the booklet, or copy straight into WhatsApp.
+
+How it works: a greedy pass hands out the strongest players first, per category, to whoever needs them most; then a local search swaps same-category pairs between teams while that flattens the totals. Draws are seeded, so the same seed always reproduces the same teams.
+
+## Building the registration form
+
+Panel 6 writes the Google Form for you.
+
+Set your categories, price bands and stat questions, then **Copy the script**. Paste it into [script.google.com](https://script.google.com/home/projects/create) and press Run — Google builds the whole form in your own Drive. No API keys, no backend, and none of your data passes through this tool.
+
+The questions are worded so the response sheet loads straight back into AuctionBook with nothing to remap. If you'd rather build the form by hand, **Copy a plain question list** gives you the same thing as text.
+
+Full walkthrough, including the Drive photo-sharing step: [docs/GOOGLE-FORMS.md](docs/GOOGLE-FORMS.md).
+
+## Working offline
+
+A service worker caches the app on first visit. After that it opens with no connection — booklet, teams, form generator and all. Your booklet is rebuilt locally either way, since nothing was ever sent anywhere.
+
+Updates are picked up on the next load when you're back online.
+
 ## The live auction board
 
 The shared booklet's tracker is per-device: each person's marks stay on their own phone. That's right for a booklet, wrong for the auction itself, where everyone should be looking at the same numbers.
@@ -150,6 +185,9 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/render.js` | Rows + settings → booklet HTML |
 | `assets/js/export.js` | Builds the self-contained shareable file |
 | `assets/js/liveboard.js` | Builds the live auction board |
+| `assets/js/teams.js` | Balanced team draft |
+| `assets/js/formbuilder.js` | Generates the Google Form script |
+| `sw.js` | Offline cache |
 | `assets/js/main.js` | Wires up the UI |
 | `assets/css/booklet.css` | The booklet's print design — also inlined into the export |
 
@@ -160,3 +198,5 @@ Two libraries are vendored in `assets/vendor/` to keep the app dependency-free a
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
+
+Stunity tech - by Prateek

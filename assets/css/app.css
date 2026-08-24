@@ -177,7 +177,47 @@ input[type="file"] { font-size: 12px; width: 100%; }
 .maprow input, .maprow select { font-size: 11.5px; padding: 4px 6px; }
 .maprow[data-role="ignore"] { opacity: .45; }
 
+/* ── ratings editor ──────────────────────────────────────── */
+.rate-head { display: flex; gap: 6px; margin-bottom: 8px; }
+.rate-head input { flex: 1; min-width: 0; }
+.rate-head .btn { flex: none; font-size: 12px; padding: 6px 10px; }
+.ratings { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+.rate-row {
+  display: grid; grid-template-columns: 1fr 58px 34px; gap: 8px; align-items: center;
+  padding: 5px 9px; border-bottom: 1px solid var(--line);
+}
+.rate-row:last-child { border-bottom: 0; }
+.rate-row[hidden] { display: none; }
+.rate-row .who { min-width: 0; }
+.rate-row .nm { display: block; font-size: 12.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rate-row .ct { display: block; font-size: 10.5px; color: var(--ink-3); }
+.rate-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+.rate-row .val {
+  font-size: 12.5px; font-weight: 700; text-align: right;
+  font-variant-numeric: tabular-nums; color: var(--accent);
+}
+.draft-result { margin: 12px 0; font-size: 12.5px; }
+.draft-result .row {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid var(--line);
+}
+.draft-result .row:last-child { border-bottom: 0; }
+.draft-result b { font-variant-numeric: tabular-nums; }
+.draft-result .fair { color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+
+/* ── how-to list ─────────────────────────────────────────── */
+.howto { margin: 14px 0 10px; padding-left: 20px; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+.howto li { margin-bottom: 4px; }
+.howto code { font-family: var(--mono); font-size: 11.5px; }
+.foot-brand { display: block; margin-top: 4px; color: var(--ink-3); }
+
 /* ── preview ─────────────────────────────────────────────── */
+.view-tabs { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+.view-tabs button {
+  font: inherit; font-size: 12px; font-weight: 600; border: 0; background: none;
+  color: var(--ink-2); padding: 4px 12px; border-radius: 999px; cursor: pointer;
+}
+.view-tabs button.on { background: var(--accent); color: #fff; }
 .preview-wrap { display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
 .preview-bar {
   display: flex; align-items: center; justify-content: space-between;

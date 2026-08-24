@@ -369,6 +369,49 @@ function card(p, s) {
   </article>`;
 }
 
+/* ── drafted teams sheet ────────────────────────────────────────────────── */
+
+/**
+ * The balanced-draft equivalent of the booklet: one printable sheet listing
+ * each squad. Uses the booklet's own page styling so it prints on the same
+ * paper with the same identity.
+ */
+export function buildDraftSheet(teams, settings, { ratingOf = () => null, spread = null } = {}) {
+  const size = PAGE_SIZES[settings.pageSize] || PAGE_SIZES.a4;
+  const showRating = teams.some(t => t.players.some(p => ratingOf(p) != null));
+
+  const blocks = teams.map(t => `
+    <div class="squad">
+      <div class="squad-head">
+        <h3>${esc(t.name)}</h3>
+        <div class="m">${t.players.length} player${t.players.length === 1 ? '' : 's'}
+          ${showRating ? `<b>${t.average} avg</b>` : ''}</div>
+      </div>
+      <table>${t.players.map((p, i) => `<tr>
+        <td class="n">${i + 1}</td>
+        <td>${esc(p.name)}${p.category && p.category !== 'All Players'
+          ? ` <span class="sq-cat">· ${esc(p.category)}</span>` : ''}</td>
+        ${showRating ? `<td class="p">${esc(ratingOf(p) ?? '—')}</td>` : ''}
+      </tr>`).join('')}</table>
+    </div>`).join('');
+
+  const style = `--accent:${cssColor(settings.accent)};--pw:${size.w};--ph:${size.h}`;
+  return {
+    html: `<div class="bk" data-theme="${esc(settings.theme)}" style="${style}">
+      <section class="page grow">
+        <h2 class="ptitle">Teams<small>${esc(settings.title || 'Draft')}${
+          settings.subtitle ? ` · ${esc(settings.subtitle)}` : ''}</small></h2>
+        ${spread ? `<p class="draft-note">Squads drawn to balance player ratings —
+          the strongest and weakest sides are ${spread.averageGap} apart on average rating.</p>` : ''}
+        <div class="squads">${blocks}</div>
+        <div class="draft-foot">${esc(settings.footer || '')}</div>
+      </section>
+    </div>`,
+    pageCount: 1,
+    pageSizeCss: size.css,
+  };
+}
+
 /* ── small helpers ──────────────────────────────────────────────────────── */
 
 /** Print-quality QR as inline SVG — one path, no raster, no runtime dependency. */

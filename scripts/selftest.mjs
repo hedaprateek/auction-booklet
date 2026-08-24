@@ -5,7 +5,10 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { SAMPLE } from '../assets/js/sample-data.js';
+import vm from 'node:vm';
 import { gridToTable } from '../assets/js/parse.js';
+import { balanceTeams, teamSpread, teamsAsText } from '../assets/js/teams.js';
+import { buildAppsScript, buildQuestionList } from '../assets/js/formbuilder.js';
 import { autoMap, byRole, prettyLabel } from '../assets/js/mapping.js';
 import { normalizeImageUrl, lookupPhoto } from '../assets/js/images.js';
 import { normalize, buildBook, parseTeams, qrSvg } from '../assets/js/render.js';
@@ -226,6 +229,121 @@ console.log('\nExample input files');
   check('form sheet: no email reaches the page', !gh.includes('@example.com'));
   check('form sheet: no timestamp reaches the page', !gh.includes('19:04:11'));
   check('form sheet: T-shirt size stays out', !/T.?shirt/i.test(gh));
+}
+
+console.log('\nBalanced team draft');
+{
+  const mk = (n, cats) => Array.from({ length: n }, (_, i) =>
+    ({ name: `P${i + 1}`, rating: 1 + (i * 7) % 10, cat: cats[i % cats.length] }));
+  const ratingOf = p => p.rating, groupOf = p => p.cat;
+
+  for (const [n, tc, cats] of [[24, 4, ['Bat', 'Bowl', 'AR', 'WK']], [23, 4, ['Bat', 'Bowl']],
+    [30, 6, ['A', 'B', 'C']], [7, 3, ['X']], [100, 8, ['A', 'B', 'C', 'D']]]) {
+    const pool = mk(n, cats);
+    const teams = balanceTeams(pool, { teamCount: tc, ratingOf, groupOf, byCategory: true, seed: 7 });
+    const names = teams.flatMap(t => t.players.map(p => p.name));
+    const sizes = teams.map(t => t.players.length);
+    const catCounts = cats.map(c => teams.map(t => t.players.filter(p => p.cat === c).length));
+    const { averageGap } = teamSpread(teams);
+    check(`${n} players into ${tc} teams: everyone placed once`,
+      names.length === n && new Set(names).size === n);
+    check(`${n}/${tc}: squad sizes within one`, Math.max(...sizes) - Math.min(...sizes) <= 1, sizes.join(','));
+    check(`${n}/${tc}: categories spread within one`,
+      catCounts.every(c => Math.max(...c) - Math.min(...c) <= 1), JSON.stringify(catCounts));
+    check(`${n}/${tc}: average ratings within 1.5`, averageGap <= 1.5, String(averageGap));
+  }
+
+  const pool = mk(24, ['A', 'B']);
+  const draw = s => balanceTeams(pool, { teamCount: 4, ratingOf, groupOf, seed: s })
+    .map(t => t.players.map(p => p.name).join(',')).join('|');
+  check('same seed reproduces the same draw', draw(3) === draw(3));
+  check('a new seed redraws', draw(3) !== draw(9));
+
+  const flat = balanceTeams(mk(12, ['A']), { teamCount: 3, ratingOf: () => 5, groupOf, seed: 1 });
+  check('equal ratings still split evenly', teamSpread(flat).totalGap === 0);
+  check('handles more teams than players',
+    balanceTeams(mk(3, ['A']), { teamCount: 8, ratingOf, groupOf }).length <= 3 + 5);
+
+  const txt = teamsAsText(balanceTeams(mk(4, ['A']), { teamCount: 2, ratingOf, groupOf, seed: 1 }),
+    { title: 'Sunday Friendly', ratingOf });
+  check('WhatsApp text lists every player', (txt.match(/^\d+\. P\d/gm) || []).length === 4, txt.slice(0, 40));
+}
+
+console.log('\nGoogle Form generator');
+{
+  // Run the generated script against a mock FormApp. This proves the file
+  // executes and asks for the right questions — string matching cannot.
+  const run = cfg => {
+    const src = buildAppsScript(cfg);
+    const log = [];
+    const chain = () => new Proxy({}, {
+      get: (_, k) => (...a) => { log.push([String(k), ...a]); return k === 'build' ? {} : chain(); },
+    });
+    const form = new Proxy({}, {
+      get: (_, k) => (...a) => {
+        log.push([String(k), ...a]);
+        if (String(k).startsWith('get')) return `https://forms.example/${String(k)}`;
+        return String(k).startsWith('add') ? chain() : form;
+      },
+    });
+    const ctx = {
+      FormApp: { create: (...a) => { log.push(['create', ...a]); return form; },
+        createTextValidation: () => chain() },
+      Logger: { log: m => log.push(['LOG', m]) },
+    };
+    vm.createContext(ctx);
+    new vm.Script(src + '\ncreateAuctionForm();').runInContext(ctx);
+    return { log, titles: log.filter(r => r[0] === 'setTitle').map(r => r[1]) };
+  };
+
+  const { log, titles } = run({
+    title: 'Riverside "Premier" League', categories: ['Batter', 'Bowler'],
+    priceBands: ['10000', '25000'], stats: ['Runs scored', 'Wickets taken'],
+    subtitles: ['Age'], currency: '₹',
+  });
+  check('the generated script runs', log.length > 0);
+  check('creates a form with the exact title',
+    log.find(r => r[0] === 'create')?.[1] === 'Riverside "Premier" League');
+  check('asks for the name first', titles[0].startsWith('Full name'));
+  check('asks every configured stat',
+    titles.includes('Runs scored') && titles.includes('Wickets taken'));
+  check('offers the categories as choices',
+    log.some(r => r[0] === 'setChoiceValues' && r[1].join() === 'Batter,Bowler'));
+  check('prefixes price bands with the currency',
+    log.some(r => r[0] === 'setChoiceValues' && r[1].join() === '₹10000,₹25000'));
+  check('logs the links at the end', log.filter(r => r[0] === 'LOG').length === 2);
+  check('defaults also run', run({}).titles.length > 5);
+
+  const list = buildQuestionList({ categories: ['A'], stats: ['S'], subtitles: [], priceBands: [] });
+  check('question list is numbered', /^1\. Full name/m.test(list));
+  check('question list carries the footer', list.includes('Stunity tech - by Prateek'));
+}
+
+console.log('\nOffline cache');
+{
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  const listed = new Set([...sw.matchAll(/^\s*'([^']+)',/gm)].map(m => m[1]));
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+
+  // Everything index.html pulls in must be cached.
+  const refs = [...html.matchAll(/(?:href|src)="((?!https?:|data:)[^"#]+)"/g)]
+    .map(m => m[1]).filter(u => !u.endsWith('.xlsx'));
+  for (const r of refs) check(`index.html asset cached: ${r}`, listed.has(r));
+
+  // So must every module, or it breaks the moment the network goes.
+  for (const f of fs.readdirSync(path.join(root, 'assets/js'))) {
+    check(`module cached: ${f}`, listed.has(`assets/js/${f}`));
+  }
+  for (const f of fs.readdirSync(path.join(root, 'assets/css'))) {
+    check(`stylesheet cached: ${f}`, listed.has(`assets/css/${f}`));
+  }
+  // And nothing listed may be missing from disk.
+  for (const u of listed) {
+    if (u === './') continue;
+    check(`cached file exists: ${u}`, fs.existsSync(path.join(root, u)));
+  }
+  check('cache name is versioned', /const CACHE = 'auctionbook-v\d+'/.test(sw));
 }
 
 console.log(failures ? `\n${failures} check(s) failed\n` : '\nAll checks passed\n');

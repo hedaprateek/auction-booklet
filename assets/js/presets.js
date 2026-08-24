@@ -9,6 +9,7 @@ export const ROLES = [
   { id: 'category',  label: 'Category',  single: true,  help: 'Splits the booklet into sections' },
   { id: 'team',      label: 'Team',      single: true,  help: 'Current or previous team' },
   { id: 'basePrice', label: 'Base price', single: true, help: 'Highlighted on the card and in the index' },
+  { id: 'rating',    label: 'Rating',     single: true,  help: 'Player strength, used to draft balanced teams' },
   { id: 'subtitle',  label: 'Subtitle',  single: false, help: 'Small line under the name' },
   { id: 'badge',     label: 'Badge',     single: false, help: 'Small pill on the card' },
   { id: 'stat',      label: 'Stat',      single: false, help: 'Shown in the stat grid' },

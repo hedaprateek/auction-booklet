@@ -113,7 +113,7 @@ ${VIEWER_CSS}
   </div>
 </main>
 
-<footer class="vfoot">${esc(data.footer)} <span>· Built with AuctionBook</span></footer>
+<footer class="vfoot">${esc(data.footer)} <span>· Built with AuctionBook · Stunity tech - by Prateek</span></footer>
 
 <script>
 const PHOTOS = ${JSON.stringify(photos)};
