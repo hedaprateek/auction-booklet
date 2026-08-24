@@ -9,7 +9,7 @@
 // scripts/selftest.mjs asserts this list covers every asset the page loads, so
 // a new module can't quietly break offline mode.
 
-const CACHE = 'auctionbook-v4';
+const CACHE = 'auctionbook-v5';
 
 const PRECACHE = [
   './',
@@ -48,10 +48,13 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
+  // Deliberately no clients.claim(): a page that already loaded its modules
+  // from the previous version must not have a newer worker take over
+  // mid-session, or it ends up running a mix of two builds. The new worker
+  // takes charge on the next load, when everything comes from one version.
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
   );
 });
 
@@ -72,7 +75,18 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => null);
 
-      if (cached) return cached;                     // instant, then refreshed above
+      // The page itself goes network-first. Serving a cached index.html while
+      // the modules beside it were refreshed is how you end up running half of
+      // one build and half of another; the page is small, so the round trip is
+      // cheap, and offline still falls through to the cache below.
+      if (req.mode === 'navigate') {
+        const fresh = await network;
+        if (fresh) return fresh;
+        if (cached) return cached;
+      } else if (cached) {
+        return cached;                               // instant, then refreshed above
+      }
+
       const fresh = await network;
       if (fresh) return fresh;
 

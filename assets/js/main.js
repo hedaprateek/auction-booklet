@@ -290,12 +290,14 @@ function bindSettings() {
     S.settings.preset = e.target.value;
 
     // A judged competition brings its own criteria, vocabulary and colour.
+    // Switching back to a sport must CLEAR them, not leave the last
+    // competition's criteria sitting in the Judging panel.
     const comp = getCompetition(e.target.value);
+    S.criteria = comp ? comp.criteria.map(c => ({ ...c })) : [];
+    S.settings.noun = comp ? comp.noun : '';
+    S.settings.criteria = S.criteria;
+    renderCriteria();
     if (comp) {
-      S.criteria = comp.criteria.map(c => ({ ...c }));
-      S.settings.noun = comp.noun;
-      S.settings.criteria = S.criteria;
-      renderCriteria();
       $('#panel-judge').open = true;
       toast(`${comp.label}: ${comp.criteria.length} criteria loaded. Edit them in Judging.`);
     }
@@ -751,7 +753,11 @@ function saveProject() {
     rows: S.rows,
     photos: [...S.photoIndex.entries()],
     teamLogos: [...S.teamLogos.entries()],
-    ratings: S.ratings,
+    // Only ratings for players still in the sheet. Otherwise every edited
+    // upload leaves its old keys behind and the project file grows forever.
+    ratings: Object.fromEntries((S.players || [])
+      .map(p => [ratingKey(p), S.ratings[ratingKey(p)]])
+      .filter(([, v]) => v != null)),
     criteria: S.criteria,
   };
   download(`${slug(S.settings.title || 'auction')}.auctionbook.json`,
