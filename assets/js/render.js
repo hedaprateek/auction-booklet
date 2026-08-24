@@ -6,7 +6,7 @@
 
 import { byRole } from './mapping.js';
 import { formatMoney, esc, initials, compareValues } from './format.js';
-import { lookupPhoto, isUrl, normalizeKey } from './images.js';
+import { lookupPhoto, isUrl, normalizeKey, normalizeImageUrl } from './images.js';
 import qrcode from '../vendor/qrcode.mjs';
 
 const LAYOUT = {
@@ -59,7 +59,7 @@ export function normalize(rows, fields, settings, photoIndex = new Map()) {
       teamLabel: m.team ? (labelOf[m.team] || 'Team') : '',
       basePrice: m.basePrice ? row[m.basePrice] : '',
       baseLabel: m.basePrice ? (labelOf[m.basePrice] || 'Base Price') : 'Base Price',
-      photo: embedded || (isUrl(photoValue) ? String(photoValue).trim() : null),
+      photo: embedded || (isUrl(photoValue) ? normalizeImageUrl(photoValue) : null),
       subtitle: pick(m.subtitle),
       badges: pick(m.badge),
       stats: pick(m.stat),
@@ -332,10 +332,13 @@ const sectionBand = (group, suffix) => `
 
 function card(p, s) {
   const stats = p.stats.slice(0, p.maxStats);
+  // The initials always sit underneath, and the photo covers them. A URL that
+  // fails — a Drive folder that was never shared, a booklet read offline —
+  // then falls back to something that looks deliberate instead of broken.
   const photo = s.showPhotos
-    ? `<div class="card-photo">${p.photo
-        ? `<img src="${esc(p.photo)}" alt="" loading="lazy">`
-        : `<div class="noimg">${esc(initials(p.name))}</div>`}
+    ? `<div class="card-photo">
+       <div class="noimg">${esc(initials(p.name))}</div>
+       ${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy">` : ''}
        <div class="lot">${esc(p.lot)}</div></div>`
     : `<div class="card-photo"></div>`;
 

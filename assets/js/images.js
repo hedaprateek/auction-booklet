@@ -54,15 +54,47 @@ export async function buildPhotoIndex(files, onProgress) {
  * (as a file name), the lot/id, then the player's name.
  */
 export function lookupPhoto(index, { photoValue, id, name }) {
+  if (!index.size) return null;
+
   for (const candidate of [photoValue, id, name]) {
-    if (!candidate) continue;
-    const hit = index.get(normalizeKey(candidate));
-    if (hit) return hit;
+    const key = normalizeKey(candidate);
+    if (key && index.has(key)) return index.get(key);
   }
-  return null;
+
+  // Google Forms saves uploads as "<Respondent Name> - IMG_2231.jpg", and
+  // people label files "12 ravi kumar.jpg". Accept a file whose name starts
+  // with the player's name or lot — but only when exactly one file does, so
+  // an ambiguous match never puts the wrong face on a card.
+  const only = prefix => {
+    if (!prefix || prefix.length < 2) return null;
+    const hits = [...index.keys()].filter(k => k === prefix || k.startsWith(prefix + ' '));
+    return hits.length === 1 ? index.get(hits[0]) : null;
+  };
+  return only(normalizeKey(name)) || only(normalizeKey(id));
 }
 
 export const isUrl = v => /^(https?:)?\/\//i.test(String(v || '').trim()) || /^data:image\//i.test(String(v || ''));
+
+/**
+ * Google Forms file-upload questions write a Drive *page* link into the
+ * response sheet — `drive.google.com/open?id=…`. That is a web page, not an
+ * image: dropped into an <img> it silently fails. Rewrite the known Drive
+ * shapes to the host that actually serves the bytes.
+ *
+ * The file still has to be readable by whoever opens the booklet — Forms
+ * uploads are private to the form owner until the folder is shared.
+ */
+export function normalizeImageUrl(value) {
+  const url = String(value || '').trim();
+  const id =
+    url.match(/\/file\/d\/([-\w]{20,})/)?.[1] ||
+    url.match(/[?&]id=([-\w]{20,})/)?.[1] ||
+    (/drive\.google\.com|docs\.google\.com/.test(url) ? url.match(/([-\w]{25,})/)?.[1] : null);
+
+  if (!id) return url;
+  // lh3 serves the file directly and takes a size hint; =w800 keeps prints sharp.
+  return `https://lh3.googleusercontent.com/d/${id}=w800`;
+}
 
 /** Try to inline a remote image so the shared file works offline. May fail on CORS. */
 export async function inlineRemote(url) {

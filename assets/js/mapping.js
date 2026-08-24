@@ -7,6 +7,11 @@ import { getPreset, SINGLE_ROLES } from './presets.js';
 // Columns that should never end up in a document handed to a room full of people.
 const PRIVATE = /(phone|mobile|whats ?app|contact|e-?mail|aadhaar|aadhar|pan\b|address|dob|date of birth|password|account|ifsc|upi)/i;
 
+// Bookkeeping a form adds for itself, and answers that are about running the
+// event rather than about the player. Neither belongs on an auction card.
+const NOISE = /^(timestamp|score|submission ?id|response ?id|last ?modified|form ?response|status|untitled question|column \d+)$/i;
+const LOGISTICS = /(t.?shirt|jersey ?size|shirt ?size|payment|transaction|utr\b|receipt|paid\b|consent|declaration|terms|signature|available|availability|attendance|how did you hear)/i;
+
 const RULES = [
   ['name',      /^(player|full|player's)?\s*name$|^player$|^name of/i,               100],
   ['name',      /name/i,                                                              40],
@@ -32,7 +37,7 @@ export function autoMap(headers, rows, presetId) {
   // to the strongest candidate first.
   const candidates = [];
   headers.forEach(h => {
-    if (PRIVATE.test(h)) { roleOf.set(h, 'ignore'); return; }
+    if (PRIVATE.test(h) || NOISE.test(h.trim()) || LOGISTICS.test(h)) { roleOf.set(h, 'ignore'); return; }
     RULES.forEach(([role, re, score]) => {
       if (re.test(h)) candidates.push({ h, role, score });
     });
@@ -72,10 +77,28 @@ export function autoMap(headers, rows, presetId) {
   return headers.map(h => ({ key: h, label: prettyLabel(h), role: roleOf.get(h) || 'ignore' }));
 }
 
-/** "STRIKE_RATE" -> "Strike Rate", "runs_scored" -> "Runs Scored" */
+/**
+ * "STRIKE_RATE" -> "Strike Rate", "runs_scored" -> "Runs Scored".
+ *
+ * Google Forms headers are whole questions — "Total runs scored (approximate)"
+ * — and a stat tile is about twelve characters wide. Trim them to the noun
+ * that was actually being asked for; the user can still edit any label.
+ */
 export function prettyLabel(h) {
-  const s = h.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (/[a-z]/.test(s) && /[A-Z]/.test(s)) return s;          // already mixed case, leave it
+  let s = String(h)
+    .replace(/\([^)]*\)/g, ' ')                                   // "(approx.)", "(optional)"
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[?:.\s]+$/, '')                                     // trailing "?" or ":"
+    .replace(/^(please\s+)?(enter|upload|attach|tell us|share|state)\s+(your|the|a|an)\s+/i, '')
+    .replace(/^your\s+/i, '')
+    .trim();
+
+  if (!s) s = String(h).trim();
+  if (/[a-z]/.test(s) && /[A-Z]/.test(s)) return s;               // already mixed case, leave it
+  if (!/[a-z]/.test(s)) s = s.toLowerCase();                      // SHOUTING -> Title Case
   return s.replace(/\b\w/g, c => c.toUpperCase());
 }
 

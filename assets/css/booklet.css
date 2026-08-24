@@ -154,7 +154,14 @@
 
 /* photo */
 .bk .card-photo { flex: none; position: relative; background: var(--tint); overflow: hidden; }
-.bk .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The photo is layered over the initials, so a URL that fails to load
+   reveals the fallback rather than a broken-image icon. */
+/* No background here on purpose: a broken image must stay transparent so the
+   initials underneath show through. .card-photo carries the tint. */
+.bk .card-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
 .bk .card-photo .noimg {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
   font-family: var(--serif); color: var(--accent); opacity: .5; font-weight: 700;

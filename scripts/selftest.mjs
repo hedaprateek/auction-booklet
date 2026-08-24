@@ -1,7 +1,13 @@
 // Smoke test for the rendering pipeline — runs without a browser.
 //   node scripts/selftest.mjs
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { SAMPLE } from '../assets/js/sample-data.js';
-import { autoMap, byRole } from '../assets/js/mapping.js';
+import { gridToTable } from '../assets/js/parse.js';
+import { autoMap, byRole, prettyLabel } from '../assets/js/mapping.js';
+import { normalizeImageUrl, lookupPhoto } from '../assets/js/images.js';
 import { normalize, buildBook, parseTeams, qrSvg } from '../assets/js/render.js';
 import { formatMoney } from '../assets/js/format.js';
 
@@ -110,6 +116,117 @@ const logoBook = buildBook(normalize(rows, fields, settings), settings,
   { teamLogos: new Map([['harbour hawks', 'data:image/png;base64,AAAA']]) });
 check('logo reaches the teams page', logoBook.html.includes('class="team-logo"'));
 check('only the matched team gets one', (logoBook.html.match(/team-logo/g) || []).length === 1);
+
+console.log('\nGoogle Forms response sheets');
+{
+  const fh = [
+    'Timestamp', 'Email Address',
+    'Full name (as it should appear in the booklet)',
+    'Which category are you registering for?',
+    'Your age', 'City / locality', 'Batting style',
+    'Matches played (approx.)', 'Total runs (approx.)',
+    'Upload a recent photo', 'Anything team owners should know about you?',
+    'Mobile number', 'T-shirt size', 'How did you hear about us?',
+  ];
+  const frows = [Object.fromEntries(fh.map(h => [h,
+    h === 'Upload a recent photo' ? 'https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUvWx'
+      : /age|Matches|runs/i.test(h) ? '24' : 'x']))];
+  const ff = autoMap(fh, frows, 'cricket');
+  const roleFor = k => ff.find(f => f.key === k).role;
+  const labelFor = k => ff.find(f => f.key === k).label;
+
+  check('hides the form Timestamp', roleFor('Timestamp') === 'ignore', roleFor('Timestamp'));
+  check('hides the collected email', roleFor('Email Address') === 'ignore');
+  check('hides the phone number', roleFor('Mobile number') === 'ignore');
+  check('hides T-shirt size', roleFor('T-shirt size') === 'ignore', roleFor('T-shirt size'));
+  check('hides "how did you hear about us"', roleFor('How did you hear about us?') === 'ignore');
+  check('finds the name behind the question',
+    roleFor('Full name (as it should appear in the booklet)') === 'name');
+  check('finds the category', roleFor('Which category are you registering for?') === 'category');
+  check('finds the photo upload', roleFor('Upload a recent photo') === 'photo');
+  check('keeps the free-text answer as a note',
+    roleFor('Anything team owners should know about you?') === 'note');
+  check('trims a question into a stat label',
+    labelFor('Matches played (approx.)') === 'Matches played', labelFor('Matches played (approx.)'));
+  check('drops a leading "Your"', labelFor('Your age') === 'Age', labelFor('Your age'));
+  check('keeps a plain header intact',
+    prettyLabel('Strike Rate') === 'Strike Rate' && prettyLabel('RUNS_SCORED') === 'Runs Scored');
+}
+
+console.log('\nDrive photo links');
+check('rewrites an open?id= link',
+  normalizeImageUrl('https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUvWx')
+    === 'https://lh3.googleusercontent.com/d/1AbCdEfGhIjKlMnOpQrStUvWx=w800');
+check('rewrites a /file/d/ link',
+  normalizeImageUrl('https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWx/view?usp=sharing')
+    === 'https://lh3.googleusercontent.com/d/1AbCdEfGhIjKlMnOpQrStUvWx=w800');
+check('leaves an ordinary image url alone',
+  normalizeImageUrl('https://example.com/players/ravi.jpg') === 'https://example.com/players/ravi.jpg');
+
+console.log('\nPhoto file matching');
+{
+  const idx = new Map([
+    ['ravi kumar img 2231', 'A'],
+    ['sana iqbal photo', 'B'],
+    ['12', 'C'],
+    ['arjun menon', 'D'],
+  ]);
+  const find = (name, id) => lookupPhoto(idx, { photoValue: '', id, name });
+  check('exact name still wins', find('Arjun Menon', '') === 'D');
+  check('matches a Forms upload prefix', find('Ravi Kumar', '') === 'A', find('Ravi Kumar', ''));
+  check('matches "<name> photo.jpg"', find('Sana Iqbal', '') === 'B');
+  check('matches on lot number', find('Someone Else', '12') === 'C');
+  check('no match rather than a wrong face', find('Unknown Player', '') === null);
+  const ambiguous = new Map([['ravi kumar a', 'X'], ['ravi kumar b', 'Y']]);
+  check('refuses an ambiguous prefix',
+    lookupPhoto(ambiguous, { photoValue: '', id: '', name: 'Ravi Kumar' }) === null);
+}
+
+console.log('\nExample input files');
+{
+  const require = createRequire(import.meta.url);
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const XLSX = require(path.join(root, 'assets/vendor/xlsx.full.min.js'));
+  const dir = path.join(root, 'sample', 'formats');
+
+  for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.csv'))) {
+    const grid = XLSX.utils.sheet_to_json(
+      XLSX.read(fs.readFileSync(dir + '/' + file, 'utf8'), { type: 'string' }).Sheets.Sheet1,
+      { header: 1, blankrows: false, defval: '', raw: false });
+    const { headers, rows } = gridToTable(grid, 1);
+    const f = autoMap(headers, rows, 'generic');
+    const m = byRole(f);
+    const st = {
+      ...SAMPLE.settings, logo: '', theme: 'classic', pageSize: 'a4', perPage: 4,
+      groupBy: m.category || '', sortBy: '', sortDesc: false, showCover: true, showIndex: true,
+      writeIn: true, showPhotos: true, sequentialLots: false, sectionBreak: true, qrLink: '',
+    };
+    const players = normalize(rows, f, st);
+    const b = buildBook(players, st);
+    const ok = !!m.name && players.length === rows.length && b.pageCount > 0
+      && !b.html.includes('undefined') && players.every(p => p.name && p.name !== 'Player 1');
+    check(`${file} loads and builds`, ok,
+      `name=${m.name} players=${players.length}/${rows.length} pages=${b.pageCount}`);
+  }
+
+  // The Forms sheet is the one with traps in it — check them by name.
+  const g = XLSX.utils.sheet_to_json(
+    XLSX.read(fs.readFileSync(dir + '/google-form-responses.csv', 'utf8'), { type: 'string' }).Sheets.Sheet1,
+    { header: 1, blankrows: false, defval: '', raw: false });
+  const gt = gridToTable(g, 1);
+  const gf = autoMap(gt.headers, gt.rows, 'cricket');
+  const gp = normalize(gt.rows, gf, { ...SAMPLE.settings, groupBy: '', sortBy: '', perPage: 4 });
+  const gh = buildBook(gp, { ...SAMPLE.settings, logo: '', theme: 'classic', pageSize: 'a4',
+    perPage: 4, groupBy: '', sortBy: '', sortDesc: false, showCover: true, showIndex: true,
+    writeIn: true, showPhotos: true, sequentialLots: false, sectionBreak: true, qrLink: '' }).html;
+  check('form sheet: names survive', gp[0].name === 'Arjun Menon', gp[0].name);
+  check('form sheet: Drive links become renderable',
+    gp[0].photo?.startsWith('https://lh3.googleusercontent.com/d/'), gp[0].photo);
+  check('form sheet: no phone number reaches the page', !gh.includes('98xxxxxx'));
+  check('form sheet: no email reaches the page', !gh.includes('@example.com'));
+  check('form sheet: no timestamp reaches the page', !gh.includes('19:04:11'));
+  check('form sheet: T-shirt size stays out', !/T.?shirt/i.test(gh));
+}
 
 console.log(failures ? `\n${failures} check(s) failed\n` : '\nAll checks passed\n');
 process.exit(failures ? 1 : 0);

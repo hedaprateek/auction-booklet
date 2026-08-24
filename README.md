@@ -29,6 +29,13 @@ Everything runs in the browser. Your player list is never uploaded anywhere — 
 
 No spreadsheet handy? Click **Try it with demo data**, or grab [`sample/sample-cricket.xlsx`](sample/sample-cricket.xlsx).
 
+### Guides
+
+- **[Input formats](docs/INPUT-FORMATS.md)** — what a sheet needs to look like, worked examples for six different sports (and one that isn't a sport), and the things that will trip you up.
+- **[Collecting players with a Google Form](docs/GOOGLE-FORMS.md)** — the questions to ask, the settings that matter, and how to get the photos out of Drive without losing an evening.
+
+Example sheets you can open right here on GitHub: [`sample/formats/`](sample/formats/).
+
 ## How your columns are read
 
 Every column is assigned a role. You can change any of them.
