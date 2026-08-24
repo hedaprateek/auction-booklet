@@ -37,7 +37,7 @@ const S = {
   settings: { ...DEFAULTS },
   zoom: 'fit',
   book: null, players: null,
-  ratings: {}, draft: null, draftSeed: 1, view: 'booklet',
+  ratings: {}, ratingsSig: null, draft: null, draftSeed: 1, view: 'booklet',
   criteria: [],
 };
 
@@ -555,15 +555,15 @@ function bindDraft() {
     $('#d-col-wrap').hidden = e.target.value !== 'column';
     $('#d-manual').hidden = e.target.value === 'column';
     persistSettings();
-    renderRatings();
+    renderRatings(true);
   });
   $('#d-column').addEventListener('change', e => { S.settings.ratingColumn = e.target.value; persistSettings(); });
-  $('#d-scale').addEventListener('change', () => { S.ratings = {}; renderRatings(); });
+  $('#d-scale').addEventListener('change', () => { S.ratings = {}; renderRatings(true); });
   $('#d-search').addEventListener('input', e => {
     const q = e.target.value.trim().toLowerCase();
     $$('#d-ratings .rate-row').forEach(r => { r.hidden = !!q && !r.dataset.find.includes(q); });
   });
-  $('#d-reset-ratings').addEventListener('click', () => { S.ratings = {}; renderRatings(); });
+  $('#d-reset-ratings').addEventListener('click', () => { S.ratings = {}; renderRatings(true); });
 
   $('#d-ratings').addEventListener('input', e => {
     const row = e.target.closest('.rate-row');
@@ -590,9 +590,17 @@ function bindDraft() {
   });
 }
 
-function renderRatings() {
+/**
+ * Rebuild the ratings list only when the roster or the scale actually changes.
+ * This runs on every render, and rebuilding regardless would reset the search
+ * filter and replace the DOM under a slider being dragged.
+ */
+function renderRatings(force = false) {
   if (!S.players) return;
   const max = scaleMax();
+  const sig = `${max}|${S.players.map(ratingKey).join('~')}`;
+  if (!force && sig === S.ratingsSig) return;
+  S.ratingsSig = sig;
   $('#d-ratings').innerHTML = S.players.map(p => {
     const v = S.ratings[ratingKey(p)] ?? Math.round(max / 2);
     return `<div class="rate-row" data-key="${esc(ratingKey(p))}" data-find="${esc((p.name + ' ' + p.category).toLowerCase())}">
@@ -650,6 +658,11 @@ function formConfig() {
 }
 
 function bindForm() {
+  // Once a field has been edited it belongs to the user; seeding leaves it be.
+  for (const [sel] of [...FORM_FIELDS, ...FORM_LISTS]) {
+    $(sel).addEventListener('input', e => { e.target.dataset.touched = '1'; });
+  }
+
   // Seed from the sport preset, and from the loaded sheet if there is one.
   seedFormFromData();
   $('#preset-select').addEventListener('change', () => setTimeout(seedFormFromData, 0));
@@ -665,9 +678,19 @@ function bindForm() {
   });
 }
 
+/**
+ * Fill the form-builder fields from the loaded sheet — but only ever into a
+ * field the user has not touched. This runs on every render, so without the
+ * touched guard, clearing a box and changing any other setting would refill it
+ * from the defaults: edits appear not to stick and content keeps coming back.
+ */
 function seedFormFromData() {
   const preset = getPreset(S.settings.preset);
-  const set = (sel, arr) => { if (!$(sel).value.trim()) $(sel).value = arr.join('\n'); };
+  const set = (sel, arr) => {
+    const el = $(sel);
+    if (el.dataset.touched || el.value.trim()) return;
+    el.value = arr.join('\n');
+  };
 
   // Categories and stats from the sheet if it's loaded; otherwise the preset.
   let cats = [], stats = [];
@@ -683,8 +706,12 @@ function seedFormFromData() {
     : DEFAULT_FORM.stats));
   set('#f-bands', DEFAULT_FORM.priceBands);
   set('#f-subs', DEFAULT_FORM.subtitles);
-  if (!$('#f-title').value && S.settings.title) $('#f-title').value = `${S.settings.title} — Player Registration`;
-  if (!$('#f-event').value && S.settings.subtitle) $('#f-event').value = S.settings.subtitle;
+  const fill = (sel, v) => {
+    const el = $(sel);
+    if (!el.dataset.touched && !el.value && v) el.value = v;
+  };
+  fill('#f-title', S.settings.title && `${S.settings.title} — Player Registration`);
+  fill('#f-event', S.settings.subtitle);
 }
 
 async function copy(text, okMsg) {
