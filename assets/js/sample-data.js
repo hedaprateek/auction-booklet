@@ -16,7 +16,7 @@ export const SAMPLE = {
     footer: 'Riverside Sports Club · riversidespl.example',
     currency: '₹',
     numberFormat: 'indian',
-    perPage: 4,
+    perPage: 9,
     teamsText: 'Riverside Royals, 500000\nHarbour Hawks, 500000\nMill Road Mavericks, 500000\nOld Town Titans, 500000',
     rulesText: `# Squad rules
 Each team must sign a minimum of 11 and a maximum of 14 players.

@@ -20,7 +20,7 @@ const DEFAULTS = {
   preset: 'generic',
   title: '', subtitle: '', footer: '', logo: '',
   accent: '#c2410c', theme: 'classic',
-  pageSize: 'a4', perPage: 4,
+  pageSize: 'a4', perPage: 9,
   groupBy: '', sortBy: '', sortDesc: false,
   currency: '₹', numberFormat: 'indian',
   showCover: true, showIndex: true, writeIn: true, showPhotos: true,
@@ -344,14 +344,32 @@ function writeSettingsToForm() {
 function persistSettings() {
   try {
     const { logo, ...rest } = S.settings;
-    localStorage.setItem('auctionbook:settings', JSON.stringify(rest));
+    localStorage.setItem('auctionbook:settings',
+      JSON.stringify({ ...rest, v: SETTINGS_VERSION }));
   } catch { /* storage may be unavailable; settings just won't persist */ }
 }
+
+/**
+ * Settings saved by an older build take precedence over DEFAULTS, which means
+ * changing a default never reaches anyone who has used the app before — they
+ * keep whatever their browser stored. LAYOUT_KEYS are the ones where a new
+ * default is a deliberate improvement rather than a preference, so a bump to
+ * SETTINGS_VERSION re-applies them once and leaves everything else alone.
+ */
+const SETTINGS_VERSION = 2;
+const LAYOUT_KEYS = ['perPage', 'sectionBreak'];
 
 function restoreSettings() {
   try {
     const raw = localStorage.getItem('auctionbook:settings');
-    if (raw) Object.assign(S.settings, JSON.parse(raw));
+    if (raw) {
+      const saved = JSON.parse(raw);
+      Object.assign(S.settings, saved);
+      if (saved.v !== SETTINGS_VERSION) {
+        for (const k of LAYOUT_KEYS) S.settings[k] = DEFAULTS[k];
+        persistSettings();
+      }
+    }
   } catch { /* ignore */ }
   writeSettingsToForm();
 }
