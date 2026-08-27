@@ -12,7 +12,7 @@ Built for club and corporate player auctions — cricket, football, kabaddi, vol
 
 Load an Excel or CSV file and AuctionBook gives you:
 
-- **A printed booklet** — cover, rules page, teams page, an index of every player, and player cards laid out 1, 2, 4, 6, 8 or 9 to a page. Print it or save it as a PDF.
+- **A printed booklet** — cover, rules page, teams page, an index of every player, and player cards laid out 1, 2, 4, 6, 8, 9, 12 or 16 to a page. Print it or save it as a PDF.
 - **A shareable file** — one self-contained `.html` you can send on WhatsApp or email. It opens offline on any phone or laptop, with search, category filters, and every photo embedded.
 - **A live auction tracker** (optional, inside the shared file) — mark players sold or unsold, assign them to teams, and watch each team's purse count down. Then print the **final squads** sheet or export the results as CSV.
 - **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
@@ -59,7 +59,7 @@ Every column is assigned a role. You can change any of them.
 | **Note** | Longer free text at the bottom of the card. |
 | **Hide** | Left out of the booklet entirely. |
 
-Stats print in spreadsheet order, and a card fits **9** stats at 1–2 cards per page, **6** at 4–6, and **4** at 8–9. If you have more columns than that, set the ones you don't need to **Hide** so the right ones make the cut. At 8 and 9 cards per page there's no room for notes, so those are dropped too.
+Stats print in spreadsheet order, and a card fits **9** stats at 1–2 cards per page, **6** at 4–6, **4** at 8–12, and **3** at 16. If you have more columns than that, set the ones you don't need to **Hide** so the right ones make the cut. At 8 and 9 cards per page there's no room for notes, so those are dropped too.
 
 **Personal columns are hidden by default.** Anything that looks like a phone number, email, address, date of birth or ID number is set to *Hide* automatically — a booklet gets handed around a room, and that data has no business being in it. You can override this, but think twice.
 
@@ -191,7 +191,9 @@ Page size follows your A4 / Letter setting.
 
 ### Sections: separate pages or continuous
 
-By default each category starts on a fresh page, so the booklet can be split up and handed to different tables. If your categories are small that wastes paper — a 3-player section still costs a whole sheet. Turn off **Start each section on a new page** and sections run on from one another, with the heading bands staying exactly where they belong. On the demo data that's 11 pages instead of 12; the lopsider your categories, the more it saves.
+Sections run on from one another by default, so a three-player category no longer costs a whole sheet. Turn on **Start each section on a new page** if you want to split the booklet up and hand sections to different tables.
+
+For a really dense sheet, push **Cards per page** to 12 or 16. The demo 24 players go from 11 pages at 4-up to 2 pages of cards at 16-up — still with photo, name, three stats, base price and a rule to write the sale price on. Nothing is squeezed to get there: every layout is checked for overflow and clipped text before release.
 
 Cards stay the same size either way, and a section heading never lands orphaned at the foot of a page.
 

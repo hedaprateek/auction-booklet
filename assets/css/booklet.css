@@ -404,3 +404,45 @@
   font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
 }
 .bk .cert-foot { margin-top: 6mm; font-size: 8pt; color: var(--ink-3); }
+
+/* micro: 16 cards per page — a dense roster sheet. Photo on top so the name
+   still gets the full card width at ~46mm. */
+.bk [data-density="micro"] .card { flex-direction: column; }
+.bk [data-density="micro"] .card-photo { width: 100%; height: 36%; }
+.bk [data-density="micro"] .card-photo .noimg { font-size: 11pt; }
+.bk [data-density="micro"] .card-body { padding: 1.8mm; gap: .8mm; }
+.bk [data-density="micro"] .card-name { font-size: 8pt; -webkit-line-clamp: 2; }
+.bk [data-density="micro"] .card-sub { font-size: 5.4pt; }
+.bk [data-density="micro"] .pills { display: none; }
+.bk [data-density="micro"] .stats { grid-template-columns: repeat(3, 1fr); gap: .7mm; }
+.bk [data-density="micro"] .stat { padding: .5mm .6mm; text-align: center; }
+.bk [data-density="micro"] .stat dt { font-size: 4.2pt; letter-spacing: .02em; }
+.bk [data-density="micro"] .stat dd { font-size: 6pt; }
+.bk [data-density="micro"] .note { display: none; }
+.bk [data-density="micro"] .base { padding-top: .8mm; margin-top: .8mm; }
+.bk [data-density="micro"] .base .k { font-size: 4.6pt; }
+.bk [data-density="micro"] .base .v { font-size: 6.6pt; }
+/* One unlabelled rule — there is no room for captions at this size, but the
+   auctioneer still needs somewhere to write the sale price. */
+.bk [data-density="micro"] .writein { margin-top: 1mm; }
+.bk [data-density="micro"] .writein div { padding-bottom: 2.6mm; }
+.bk [data-density="micro"] .writein div:last-child { display: none; }
+.bk [data-density="micro"] .writein span { display: none; }
+.bk [data-density="micro"] .lot { font-size: 5.2pt; padding: .3mm 1.2mm; }
+
+/* At 4-up the card is far taller than its content, which left a white void
+   above the price. The photo takes the slack instead. */
+.bk [data-density="normal"] .card-photo { flex: 1 1 34%; min-height: 34%; }
+
+/* Per-layout trims. 12- and 16-up share a density with roomier layouts, so
+   the last few millimetres are taken here rather than by changing 8- and
+   9-up, which already fit. Measured, not guessed: 12-up ran 10px long and
+   16-up 5px. */
+.bk .cards[data-perpage="12"] .pills { display: none; }
+.bk .cards[data-perpage="12"] .stat { padding: .6mm 1mm; }
+.bk .cards[data-perpage="12"] .stat dd { font-size: 6.6pt; }
+/* Grow into whatever the text does not use, instead of leaving a void
+   above the price. Growing cannot squeeze the body: everything in it is
+   flex: none and takes its natural size first. */
+.bk .cards[data-perpage="16"] .card-photo { flex: 1 1 30%; min-height: 30%; height: auto; }
+.bk .cards[data-perpage="16"] .card-sub { display: none; }

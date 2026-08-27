@@ -19,6 +19,8 @@ const LAYOUT = {
   6: { cols: 2, rows: 3, density: 'mid',    maxStats: 6 },
   8: { cols: 2, rows: 4, density: 'tight',  maxStats: 4 },
   9: { cols: 3, rows: 3, density: 'tight',  maxStats: 4 },
+  12: { cols: 3, rows: 4, density: 'tight', maxStats: 4 },
+  16: { cols: 4, rows: 4, density: 'micro', maxStats: 3 },
 };
 
 const PAGE_SIZES = {
@@ -305,7 +307,7 @@ function indexPage(rows, s, ctx, no, part, parts) {
 function cardsPage(cards, group, s, ctx, no, part, parts) {
   const band = group.ungrouped ? '' : sectionBand(group, parts > 1 ? `${part + 1}/${parts}` : '');
   return page('', rhead(s, group.ungrouped ? 'Players' : group.title) + band + `
-    <div class="cards" data-density="${ctx.layout.density}" data-photos="${s.showPhotos ? 'on' : 'off'}">
+    <div class="cards" data-density="${ctx.layout.density}" data-perpage="${s.perPage}" data-photos="${s.showPhotos ? 'on' : 'off'}">
       ${cards.map(p => card(p, s)).join('')}
     </div>` + rfoot(s, ctx, no));
 }
@@ -317,7 +319,7 @@ function flowPage(pg, s, ctx, no) {
     ? sectionBand(it.group, '')
     : it.cards.map(p => card(p, s)).join('')).join('');
   return page('', rhead(s, first && !first.group.ungrouped ? first.group.title : 'Players') + `
-    <div class="cards flow" data-density="${ctx.layout.density}" data-photos="${s.showPhotos ? 'on' : 'off'}"
+    <div class="cards flow" data-density="${ctx.layout.density}" data-perpage="${s.perPage}" data-photos="${s.showPhotos ? 'on' : 'off'}"
          style="grid-template-rows:${pg.rowsCss}">
       ${items}
     </div>` + rfoot(s, ctx, no));

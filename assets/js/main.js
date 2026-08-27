@@ -24,7 +24,7 @@ const DEFAULTS = {
   groupBy: '', sortBy: '', sortDesc: false,
   currency: '₹', numberFormat: 'indian',
   showCover: true, showIndex: true, writeIn: true, showPhotos: true,
-  sequentialLots: false, sectionBreak: true,
+  sequentialLots: false, sectionBreak: false,
   teamsText: '', rulesText: '', tracker: true, qrLink: '',
   ratingSource: 'manual', ratingColumn: '', avatarStyle: 'monogram',
   judges: '', noun: '', criteria: null,
