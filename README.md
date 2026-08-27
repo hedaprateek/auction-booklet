@@ -69,6 +69,22 @@ Name each image file after the player (`ravi-kumar.jpg`) or their lot number (`1
 
 If your sheet has a column of image URLs instead, map it to **Photo** and it will be used directly.
 
+### When a player has no photo
+
+Most entrants never send one. Rather than a page of identical grey boxes, AuctionBook draws each of them a mark — pick the style under **Booklet**:
+
+| Style | What you get |
+| --- | --- |
+| **Initials on colour** | Their initials on a colour of their own. The default. |
+| **Geometric pattern** | A mirrored emblem, different for every player. |
+| **Player silhouette** | A plain head-and-shoulders figure. |
+| **Numbered jersey** | A shirt carrying their lot number. |
+| **Initials only** | The original flat treatment. |
+
+The mark is fixed to the player, so it never reshuffles between prints, and colours are drawn from your accent hue so a page of them still looks like one publication. It is all inline SVG: sharp at any size, embedded in the shared file, no network.
+
+**These are deliberately not photographs.** Dropping a stock photo of a real person under a named player reads as that player, in a booklet that gets printed and bid against. If you want something photo-like, the silhouette is the honest version.
+
 ### Money
 
 Base prices are formatted Indian-style by default — `₹5 L`, `₹2.5 Cr`. Switch to `1,00,000`, `100,000`, or **As typed** if you'd rather keep whatever's in the cell. The currency symbol is a free text field, so `$`, `£`, `AED` all work.
@@ -212,6 +228,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/export.js` | Builds the self-contained shareable file |
 | `assets/js/liveboard.js` | Builds the live auction board |
 | `assets/js/teams.js` | Balanced team draft |
+| `assets/js/avatars.js` | Generated marks for players with no photo |
 | `assets/js/competitions.js` | Judged-competition presets and criteria |
 | `assets/js/judging.js` | Score sheets, certificates, scoring workbook, templates |
 | `assets/js/formbuilder.js` | Generates the Google Form script |

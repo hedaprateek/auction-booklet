@@ -5,6 +5,7 @@
 import { esc, formatMoney, initials } from './format.js';
 import { parseTeams } from './render.js';
 import { normalizeKey } from './images.js';
+import { avatarMark } from './avatars.js';
 
 /**
  * Photos appear in both the printed pages and the card list. Hoisting each
@@ -37,6 +38,7 @@ function playerPayload(players, settings, idOf) {
     st: p.stats.map(x => [x.label, x.value]),
     nt: p.notes.map(x => x.value).join(' · '),
     p: p.photo ? idOf(p.photo) : -1,
+    av: p.photo ? '' : avatarMark(p, settings.avatarStyle, settings.accent),
     pg: p.page,
   }));
 }
@@ -153,7 +155,8 @@ main{max-width:1180px;margin:0 auto;padding:16px 14px 60px}
 .vcard.sold{border-color:#15803d}.vcard.unsold{opacity:.62}
 .vc-top{display:flex;gap:11px;padding:12px}
 .vc-ph{width:64px;height:64px;flex:none;border-radius:10px;object-fit:cover;background:var(--vbg)}
-.vc-ph.noimg{display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--vacc);font-size:19px}
+.vc-ph.noimg{display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--vacc);font-size:19px;overflow:hidden}
+.vc-ph.noimg .av{width:100%;height:100%;display:block}
 .vc-id{font-size:11px;font-weight:700;color:var(--vink3);letter-spacing:.06em}
 .vc-name{font-size:16px;font-weight:650;letter-spacing:-.01em;margin:1px 0 2px;line-height:1.25}
 .vc-sub{font-size:12.5px;color:var(--vink3);line-height:1.35}
@@ -290,7 +293,7 @@ const VIEWER_JS = `
       var t = state.track[p.l] || {};
       var ph = p.p >= 0
         ? '<img class="vc-ph" src="' + PHOTOS[p.p] + '" alt="">'
-        : '<div class="vc-ph noimg">' + esc(p.n.split(/\\s+/).slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase()) + '</div>';
+        : '<div class="vc-ph noimg">' + (p.av || esc(p.n.split(/\\s+/).slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase())) + '</div>';
       return '<article class="vcard ' + (t.status || '') + '" data-l="' + esc(p.l) + '">' +
         '<div class="vc-top">' + ph + '<div style="min-width:0">' +
           '<div class="vc-id">LOT ' + esc(p.l) + '</div>' +

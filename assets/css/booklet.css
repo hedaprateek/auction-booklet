@@ -232,6 +232,9 @@
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
   font-family: var(--serif); color: var(--accent); opacity: .5; font-weight: 700;
 }
+/* A generated mark fills the slot instead of sitting in it as text. */
+.bk .card-photo .noimg:has(.av) { opacity: 1; }
+.bk .card-photo .av { width: 100%; height: 100%; display: block; }
 .bk .lot {
   position: absolute; top: 0; left: 0; background: var(--accent); color: #fff;
   font-size: 7.5pt; font-weight: 700; padding: .8mm 2mm; border-bottom-right-radius: 1.5mm;

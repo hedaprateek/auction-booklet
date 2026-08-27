@@ -7,6 +7,7 @@
 import { byRole } from './mapping.js';
 import { formatMoney, esc, initials, compareValues } from './format.js';
 import { lookupPhoto, isUrl, normalizeKey, normalizeImageUrl } from './images.js';
+import { avatarMark } from './avatars.js';
 import qrcode from '../vendor/qrcode.mjs';
 
 const LAYOUT = {
@@ -337,7 +338,7 @@ function card(p, s) {
   // then falls back to something that looks deliberate instead of broken.
   const photo = s.showPhotos
     ? `<div class="card-photo">
-       <div class="noimg">${esc(initials(p.name))}</div>
+       <div class="noimg">${avatarMark(p, s.avatarStyle, s.accent)}</div>
        ${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy">` : ''}
        <div class="lot">${esc(p.lot)}</div></div>`
     : `<div class="card-photo"></div>`;

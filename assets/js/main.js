@@ -10,6 +10,7 @@ import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
 import { buildLiveBoard } from './liveboard.js';
 import { esc } from './format.js';
+import { AVATAR_STYLES } from './avatars.js';
 import { SAMPLE } from './sample-data.js';
 
 const $ = s => document.querySelector(s);
@@ -25,7 +26,7 @@ const DEFAULTS = {
   showCover: true, showIndex: true, writeIn: true, showPhotos: true,
   sequentialLots: false, sectionBreak: true,
   teamsText: '', rulesText: '', tracker: true, qrLink: '',
-  ratingSource: 'manual', ratingColumn: '',
+  ratingSource: 'manual', ratingColumn: '', avatarStyle: 'monogram',
   judges: '', noun: '', criteria: null,
 };
 
@@ -51,6 +52,8 @@ const defaultCriteria = id => (getCompetition(id)?.criteria || []).map(c => ({ .
 /* ── boot ───────────────────────────────────────────────────────────────── */
 
 function boot() {
+  $('#s-avatar').innerHTML = AVATAR_STYLES.map(a =>
+    `<option value="${a.id}">${esc(a.label)}</option>`).join('');
   $('#preset-select').innerHTML =
     '<optgroup label="Sports auctions">'
     + PRESETS.map(p => `<option value="${p.id}">${esc(p.label)}</option>`).join('')
@@ -268,7 +271,7 @@ const BINDINGS = [
   ['#s-currency', 'currency', 'value'], ['#s-numfmt', 'numberFormat', 'value'],
   ['#s-cover', 'showCover', 'checked'], ['#s-index', 'showIndex', 'checked'],
   ['#s-writein', 'writeIn', 'checked'], ['#s-photos', 'showPhotos', 'checked'],
-  ['#s-lot', 'sequentialLots', 'checked'], ['#s-sectionbreak', 'sectionBreak', 'checked'],
+  ['#s-lot', 'sequentialLots', 'checked'], ['#s-avatar', 'avatarStyle', 'value'], ['#s-sectionbreak', 'sectionBreak', 'checked'],
   ['#s-teams', 'teamsText', 'value'], ['#s-rules', 'rulesText', 'value'],
   ['#s-tracker', 'tracker', 'checked'], ['#s-qrlink', 'qrLink', 'value'],
 ];

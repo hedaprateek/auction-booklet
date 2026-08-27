@@ -11,6 +11,7 @@ import { balanceTeams, teamSpread, teamsAsText } from '../assets/js/teams.js';
 import { buildAppsScript, buildQuestionList } from '../assets/js/formbuilder.js';
 import { COMPETITIONS, getCompetition, criteriaTotal } from '../assets/js/competitions.js';
 import { getPreset } from '../assets/js/presets.js';
+import { avatarMark, AVATAR_STYLES } from '../assets/js/avatars.js';
 import { autoMap, byRole, prettyLabel } from '../assets/js/mapping.js';
 import { normalizeImageUrl, lookupPhoto } from '../assets/js/images.js';
 import { normalize, buildBook, parseTeams, qrSvg } from '../assets/js/render.js';
@@ -397,6 +398,44 @@ console.log('\nJudged competitions');
     writeIn: false, showPhotos: true, sequentialLots: false, sectionBreak: true, qrLink: '' };
   const b2 = buildBook(normalize(rows2, f2, st2), st2);
   check('a competition sheet still builds a booklet', b2.pageCount > 0 && !b2.html.includes('undefined'));
+}
+
+console.log('\nGenerated avatars');
+{
+  const P = n => ({ name: n, lot: '1' });
+  for (const st of AVATAR_STYLES.filter(s => s.id !== 'initials')) {
+    const mark = avatarMark(P('Arjun Menon'), st.id, '#166534');
+    check(`${st.id}: valid svg`, mark.startsWith('<svg') && mark.endsWith('</svg>'), mark.slice(0, 30));
+    check(`${st.id}: no network reference`, !/https?:|url\(/.test(mark));
+  }
+  check('initials style is unchanged text', avatarMark(P('Arjun Menon'), 'initials', '#000') === 'AM');
+  check('unknown style falls back to a mark', avatarMark(P('X Y'), 'nonsense', '#166534').startsWith('<svg'));
+
+  // Stable: the same player must not get a different mark on a re-render.
+  check('same player, same mark',
+    avatarMark(P('Arjun Menon'), 'pattern', '#166534') === avatarMark(P('Arjun Menon'), 'pattern', '#166534'));
+  check('different players, different marks',
+    avatarMark(P('Arjun Menon'), 'pattern', '#166534') !== avatarMark(P('Vikram Rathore'), 'pattern', '#166534'));
+
+  // Variety: 24 demo players should not all come out the same colour.
+  const hues = new Set(rows.map(r => {
+    const m = /hsl\((\d+(?:\.\d+)?)/.exec(avatarMark({ name: r['Player Name'], lot: r['S.No'] }, 'monogram', '#166534'));
+    return m && m[1];
+  }));
+  check('marks vary across the squad', hues.size >= 5, `${hues.size} distinct hues`);
+
+  check('escapes a name with markup in it',
+    !avatarMark({ name: '<script>x</script>', lot: '1' }, 'monogram', '#166534').includes('<script'));
+  check('jersey shows the lot number',
+    avatarMark({ name: 'A B', lot: '17' }, 'jersey', '#166534').includes('>17<'));
+
+  // The booklet must actually use them.
+  const avBook = buildBook(normalize(rows, fields, { ...settings, avatarStyle: 'monogram' }),
+    { ...settings, avatarStyle: 'monogram' });
+  check('cards carry generated marks', (avBook.html.match(/class="av"/g) || []).length === 24);
+  const plainBook = buildBook(normalize(rows, fields, { ...settings, avatarStyle: 'initials' }),
+    { ...settings, avatarStyle: 'initials' });
+  check('initials setting keeps the old look', !plainBook.html.includes('class="av"'));
 }
 
 console.log('\nOffline cache');
