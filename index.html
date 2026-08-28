@@ -161,6 +161,17 @@
         </label>
         <p class="hint">Matched to teams by file name, same as player photos — <code>harbour-hawks.png</code> matches “Harbour Hawks”.</p>
         <p class="hint" id="logo-status"></p>
+        <div class="divider"></div>
+        <div class="row2">
+          <label class="field"><span>Squad minimum</span><input type="number" id="s-minsquad" min="1" value="11"></label>
+          <label class="field"><span>Squad maximum</span><input type="number" id="s-maxsquad" min="1" value="14"></label>
+        </div>
+        <label class="field"><span>Lowest base price</span><input type="text" id="s-minbase" placeholder="10000"></label>
+        <p class="hint">Used to work out what an owner can still bid: their balance minus the money they must keep back to fill the rest of their squad.</p>
+        <button id="btn-ownerpack" class="btn btn-primary btn-block">Show team owner packs</button>
+        <button id="btn-ownerbook" class="btn btn-block">Download bidding tracker <code>.xlsx</code></button>
+        <p class="hint">A pack per owner: purse plan, a bid-by-bid ladder of what they can afford, a squad checklist and a ledger to write purchases into. The workbook does the same arithmetic live.</p>
+
         <label class="field">
           <span>Rules / info page</span>
           <textarea id="s-rules" rows="8" placeholder="• Each team must have 11 players.&#10;• Bid increments of 5,000.&#10;• Unsold players re-enter in the final round."></textarea>
@@ -310,6 +321,7 @@
         <button data-view="draft">Teams</button>
         <button data-view="judge">Judging</button>
         <button data-view="certs">Certificates</button>
+        <button data-view="owners">Owners</button>
       </div>
       <span id="page-count" class="muted">No booklet yet</span>
       <div class="zoom">

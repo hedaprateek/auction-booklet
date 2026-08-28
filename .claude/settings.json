@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(curl -sk -o /dev/null -w \"app %{http_code}\\\\n\" \"https://hedaprateek.github.io/auction-booklet/\")",
+      "Bash(curl -sk -o /dev/null -w \"ownerpack.js %{http_code}\\\\n\" \"https://hedaprateek.github.io/auction-booklet/assets/js/ownerpack.js\")"
+    ]
+  }
+}

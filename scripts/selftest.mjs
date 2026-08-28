@@ -44,6 +44,12 @@ check('500000 -> ₹5 L', formatMoney(500000, '₹', 'indian') === '₹5 L', for
 check('25000000 -> ₹2.5 Cr', formatMoney(25000000, '₹', 'indian') === '₹2.5 Cr', formatMoney(25000000, '₹', 'indian'));
 check('grouped is Indian style', formatMoney(1234567, '₹', 'grouped') === '₹12,34,567', formatMoney(1234567, '₹', 'grouped'));
 check('non-numeric passes through', formatMoney('Negotiable', '₹', 'indian') === 'Negotiable');
+// A computed figure used to print every float digit: ₹45,454.545454545456
+check('a computed average rounds to paise',
+  formatMoney(500000 / 11, '₹', 'indian') === '₹45,454.55', formatMoney(500000 / 11, '₹', 'indian'));
+check('grouped rounds too',
+  formatMoney(12345.6789, '₹', 'grouped') === '₹12,345.68', formatMoney(12345.6789, '₹', 'grouped'));
+check('whole numbers keep no decimals', formatMoney(45000, '₹', 'grouped') === '₹45,000');
 
 console.log('\nBooklet build');
 const settings = {
@@ -436,6 +442,55 @@ console.log('\nGenerated avatars');
   const plainBook = buildBook(normalize(rows, fields, { ...settings, avatarStyle: 'initials' }),
     { ...settings, avatarStyle: 'initials' });
   check('initials setting keeps the old look', !plainBook.html.includes('class="av"'));
+}
+
+console.log('\nTeam owner packs');
+{
+  const { buildOwnerPacks, buildOwnerWorkbook, maxBid, reserveFor } =
+    await import('../assets/js/ownerpack.js');
+  const { workbookBytes } = await import('../assets/js/judging.js');
+
+  // The arithmetic an owner bids against.
+  check('reserve holds back every slot but the one being bid on',
+    reserveFor(4, 10000) === 30000, String(reserveFor(4, 10000)));
+  check('last slot needs no reserve', reserveFor(1, 10000) === 0);
+  check('80k with 4 slots left caps the bid at 50k',
+    maxBid(80000, 4, 10000) === 50000, String(maxBid(80000, 4, 10000)));
+  check('full purse on the final slot', maxBid(80000, 1, 10000) === 80000);
+  check('never returns a negative bid', maxBid(5000, 4, 10000) === 0);
+  check('a squad already full can spend it all', maxBid(80000, 0, 10000) === 80000);
+
+  const os = {
+    ...SAMPLE.settings, theme: 'classic', pageSize: 'a4', accent: '#166534',
+    minSquad: 11, maxSquad: 14, minBase: '10000',
+  };
+  const pack = buildOwnerPacks(os, { categories: ['Batter', 'Bowler'] });
+  check('two pages per team', pack.pageCount === parseTeams(os.teamsText).length * 2,
+    String(pack.pageCount));
+  check('every team is named', parseTeams(os.teamsText).every(t => pack.html.includes(t.name)));
+  check('ladder covers every squad slot',
+    (pack.html.match(/<tr>\s*<td>\d+<\/td>/g) || []).length >= 11);
+  check('ledger opens with the purse', pack.html.includes('Opening purse'));
+  check('squad checklist rendered', pack.html.includes('ow-cat'));
+  check('no undefined leaked', !pack.html.includes('undefined'));
+
+  const wb = XLSX.read(workbookBytes(buildOwnerWorkbook(os)), { type: 'array' });
+  check('a tab per team plus summary and help',
+    wb.SheetNames.length === parseTeams(os.teamsText).length + 2, wb.SheetNames.join('|'));
+  const t1 = wb.Sheets[wb.SheetNames[0]];
+  check('counts what has been bought', /COUNT\(E9:E32\)/.test(t1.B6?.f || ''), t1.B6?.f);
+  check('sums what has been spent', /SUM\(E9:E32\)/.test(t1.D6?.f || ''), t1.D6?.f);
+  check('balance is purse minus spent', t1.F6?.f === 'B2-D6', t1.F6?.f);
+  // The formula this whole feature exists for.
+  check('max bid subtracts the reserve',
+    t1.H6?.f === 'MAX(0,F6-MAX(0,B3-B6-1)*B4)', t1.H6?.f);
+  check('running balance per row survives the write', !!t1.G9?.f, JSON.stringify(t1.G9));
+  check('slots left counts down', /MAX\(0,\$B\$3-COUNT\(\$E\$9:E9\)\)/.test(t1.H9?.f || ''), t1.H9?.f);
+  const all = wb.Sheets['All teams'];
+  check('summary pulls each team tab', /^'[^']+'!H6$/.test(all.G2?.f || ''), all.G2?.f);
+  check('summary refs resolve',
+    Object.keys(all).filter(k => all[k]?.f).map(k => all[k].f).join(' ')
+      .match(/'[^']+'!/g).every(r => wb.SheetNames.includes(r.slice(1, -2))));
 }
 
 console.log('\nOffline cache');

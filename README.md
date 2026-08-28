@@ -105,6 +105,28 @@ It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.ht
 
 Note that anyone with the link can read it, so treat it like a public document.
 
+## Documents for team owners
+
+The booklet tells owners who is up for auction. It does not help them bid. Panel 4 produces a pack for each team:
+
+**A purse plan.** Total points, squad minimum and maximum, average per player, and a ladder showing what they can spend on one player against how many squad slots they still have to fill.
+
+**A bidding ledger.** A row per purchase — player, category, base, price paid, balance left, slots left — opening with their purse already filled in.
+
+**A squad checklist** by category, so nobody reaches the last round still needing two keepers.
+
+**A bidding tracker** (`.xlsx`, one tab per team). The owner types the price they paid; spent, balance, slots left and max bid update themselves. An *All teams* tab shows every purse at once.
+
+### The number that governs the bid
+
+Not the balance. An owner holding ₹80,000 with four slots still to fill cannot bid ₹80,000 — three of those slots must still be bought:
+
+```
+max bid now = balance − (slots still to fill − 1) × lowest base price
+```
+
+So ₹80,000 with four slots left and a ₹10,000 base caps the bid at **₹50,000**. Every sheet in the pack is built around that figure, and the workbook computes it live. Set **Squad minimum** and **Lowest base price** in panel 4 to match your rules.
+
 ## Judged competitions
 
 Not every event is an auction. Pick a competition in **Columns** — cooking, rangoli, dance, singing, fancy dress, drawing, mehndi, photography, science fair, debate, flower arrangement — and the judging criteria load with it, weighted out of 100. Every criterion, weight and label stays editable.
@@ -233,6 +255,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/avatars.js` | Generated marks for players with no photo |
 | `assets/js/competitions.js` | Judged-competition presets and criteria |
 | `assets/js/judging.js` | Score sheets, certificates, scoring workbook, templates |
+| `assets/js/ownerpack.js` | Team owner purse plans, ledgers and bidding tracker |
 | `assets/js/formbuilder.js` | Generates the Google Form script |
 | `sw.js` | Offline cache |
 | `assets/js/main.js` | Wires up the UI |

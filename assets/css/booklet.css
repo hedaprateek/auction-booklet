@@ -446,3 +446,79 @@
    flex: none and takes its natural size first. */
 .bk .cards[data-perpage="16"] .card-photo { flex: 1 1 30%; min-height: 30%; height: auto; }
 .bk .cards[data-perpage="16"] .card-sub { display: none; }
+
+/* ── team owner's pack ───────────────────────────────────── */
+.bk .owner-brief, .bk .owner-ledger { padding: 12mm; }
+.bk .ow-head {
+  display: flex; align-items: center; gap: 4mm; flex: none;
+  border-bottom: 1.2pt solid var(--accent); padding-bottom: 3mm; margin-bottom: 5mm;
+}
+.bk .ow-logo { width: 16mm; height: 16mm; object-fit: contain; flex: none; }
+.bk .ow-id { min-width: 0; }
+.bk .ow-kicker {
+  font-size: 7pt; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700;
+}
+.bk .ow-id h2 { margin: .5mm 0 0; font-family: var(--serif); font-size: 19pt; line-height: 1.1; }
+.bk .ow-id p { margin: 1mm 0 0; font-size: 8.5pt; color: var(--ink-3); }
+.bk .ow-purse {
+  margin-left: auto; text-align: right; border: .8pt solid var(--line);
+  border-radius: 1.5mm; padding: 2mm 4mm; white-space: nowrap;
+}
+.bk .ow-purse span {
+  display: block; font-size: 6.5pt; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.bk .ow-purse strong { font-family: var(--serif); font-size: 15pt; color: var(--accent); }
+
+.bk .ow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; flex: none; }
+.bk .ow-box { border: .8pt solid var(--line); border-radius: 1.5mm; padding: 4mm; }
+.bk .ow-box h3, .bk .ow-h {
+  margin: 0 0 2.5mm; font-size: 8pt; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+}
+.bk .ow-h { margin-top: 6mm; }
+.bk .ow-kv { width: 100%; border-collapse: collapse; font-size: 9pt; }
+.bk .ow-kv td { padding: 1.4mm 0; border-bottom: .5pt solid var(--line); }
+.bk .ow-kv tr:last-child td { border-bottom: 0; }
+.bk .ow-kv .v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bk .ow-steps { margin: 0; padding-left: 4.5mm; font-size: 8.5pt; line-height: 1.5; }
+.bk .ow-steps li { margin-bottom: 1.5mm; }
+.bk .ow-note { font-size: 8pt; color: var(--ink-3); margin: 0 0 2.5mm; line-height: 1.45; }
+
+.bk .ow-ladder { width: 100%; border-collapse: collapse; font-size: 8.5pt; flex: none; }
+.bk .ow-ladder th {
+  text-align: left; background: var(--tint); border: .6pt solid var(--line);
+  padding: 1.6mm 2mm; font-size: 7pt; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2);
+}
+.bk .ow-ladder td { border: .6pt solid var(--line); padding: 1.3mm 2mm; font-variant-numeric: tabular-nums; }
+.bk .ow-ladder .v { text-align: right; font-weight: 700; color: var(--accent); }
+.bk .ow-ladder tr:nth-child(even) td { background: color-mix(in srgb, var(--accent) 3%, #fff); }
+
+.bk .ow-check { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm 5mm; }
+.bk .ow-cat { display: flex; align-items: center; gap: 2mm; font-size: 8.5pt; }
+.bk .ow-cat span { flex: 1; }
+.bk .ow-cat i { width: 5mm; height: 5mm; border: .6pt solid var(--ink-3); border-radius: .8mm; }
+
+.bk .ow-led { width: 100%; border-collapse: collapse; font-size: 9pt; flex: none; }
+.bk .ow-led th {
+  background: var(--tint); border: .6pt solid var(--line);
+  padding: 2mm 1.5mm; font-size: 7pt; font-weight: 700; text-align: left;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2);
+}
+.bk .ow-led td { border: .6pt solid var(--line); height: 8.4mm; padding: 0 1.5mm; }
+.bk .ow-led .c-n { width: 8mm; text-align: center; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.bk .ow-led .c-cat { width: 24mm; }
+.bk .ow-led .c-m { width: 22mm; }
+.bk .ow-led .c-s { width: 16mm; text-align: center; }
+.bk .ow-led .ow-open td { background: var(--tint); font-weight: 700; font-size: 8pt; }
+.bk .ow-led .ow-open .v { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.bk .ow-sign { margin-top: auto; padding-top: 8mm; display: flex; gap: 16mm; flex: none; }
+.bk .ow-sign div { flex: 0 0 56mm; border-top: .8pt solid var(--ink-3); padding-top: 1.5mm; }
+.bk .ow-sign span { font-size: 7.5pt; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.bk .ow-foot {
+  margin-top: 5mm; padding-top: 2.5mm; border-top: .6pt solid var(--line);
+  display: flex; justify-content: space-between; font-size: 7pt; color: var(--ink-3); flex: none;
+}

@@ -30,7 +30,10 @@ function trim(n) {
 /** 1234567 -> 12,34,567 */
 function groupIndian(n) {
   const neg = n < 0;
-  const [int, dec] = Math.abs(n).toString().split('.');
+  // Round first: a computed figure like 500000/11 would otherwise print
+  // every one of its float digits — ₹45,454.545454545456.
+  const rounded = Math.round(Math.abs(n) * 100) / 100;
+  const [int, dec] = String(rounded).split('.');
   let out;
   if (int.length <= 3) out = int;
   else {

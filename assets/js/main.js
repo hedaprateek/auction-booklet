@@ -5,6 +5,7 @@ import { balanceTeams, teamSpread, teamsAsText } from './teams.js';
 import { buildAppsScript, buildQuestionList, DEFAULT_FORM } from './formbuilder.js';
 import { COMPETITIONS, getCompetition, isCompetition, criteriaTotal } from './competitions.js';
 import { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTemplate, workbookBytes } from './judging.js';
+import { buildOwnerPacks, buildOwnerWorkbook } from './ownerpack.js';
 import { normalize, buildBook, buildDraftSheet, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
@@ -28,6 +29,7 @@ const DEFAULTS = {
   teamsText: '', rulesText: '', tracker: true, qrLink: '',
   ratingSource: 'manual', ratingColumn: '', avatarStyle: 'monogram',
   judges: '', noun: '', criteria: null,
+  minSquad: 11, maxSquad: 14, minBase: '',
 };
 
 const S = {
@@ -72,6 +74,7 @@ function boot() {
   bindDraft();
   bindJudging();
   bindTemplates();
+  bindOwners();
   bindForm();
   registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
@@ -274,6 +277,8 @@ const BINDINGS = [
   ['#s-lot', 'sequentialLots', 'checked'], ['#s-avatar', 'avatarStyle', 'value'], ['#s-sectionbreak', 'sectionBreak', 'checked'],
   ['#s-teams', 'teamsText', 'value'], ['#s-rules', 'rulesText', 'value'],
   ['#s-tracker', 'tracker', 'checked'], ['#s-qrlink', 'qrLink', 'value'],
+  ['#s-minsquad', 'minSquad', 'number'], ['#s-maxsquad', 'maxSquad', 'number'],
+  ['#s-minbase', 'minBase', 'value'],
 ];
 
 function bindSettings() {
@@ -396,6 +401,10 @@ function render() {
   } else if (S.view === 'certs') {
     S.book = buildCertificates(S.players, judgeConfig());
     $('#page-count').textContent = `${S.book.pageCount} certificates`;
+  } else if (S.view === 'owners') {
+    S.book = buildOwnerPacks(S.settings, { teamLogos: S.teamLogos, categories: ownerCategories() });
+    const t = parseTeams(S.settings.teamsText).length;
+    $('#page-count').textContent = `${t} owner pack${t === 1 ? '' : 's'} · ${S.book.pageCount} pages`;
   } else if (S.view === 'draft' && S.draft) {
     S.book = buildDraftSheet(S.draft, S.settings, { ratingOf, spread: teamSpread(S.draft) });
     $('#page-count').textContent = `${S.draft.length} teams · ${S.players.length} players`;
@@ -515,6 +524,36 @@ function showView(view) {
   $('#view-tabs').hidden = false;
   $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === view));
   render();
+}
+
+/* ── team owner packs ───────────────────────────────────────────────────── */
+
+function ownerCategories() {
+  if (!S.players?.length || !S.settings.groupBy) return [];
+  return [...new Set(S.players
+    .map(p => String(p.row[S.settings.groupBy] || '').trim())
+    .filter(Boolean))];
+}
+
+function bindOwners() {
+  $('#btn-ownerpack').addEventListener('click', () => {
+    if (!parseTeams(S.settings.teamsText).length) {
+      toast('Add your teams above first — one per line, as “Name, Purse”.', 'error');
+      return;
+    }
+    showView('owners');
+  });
+
+  $('#btn-ownerbook').addEventListener('click', () => {
+    if (!parseTeams(S.settings.teamsText).length) {
+      toast('Add your teams above first — one per line, as “Name, Purse”.', 'error');
+      return;
+    }
+    download(`${slug(S.settings.title || 'auction')}-bidding-tracker.xlsx`,
+      workbookBytes(buildOwnerWorkbook(S.settings)),
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast('Tracker downloaded — one tab per team, and the max-bid figure updates itself.');
+  });
 }
 
 /* ── 6 · blank templates ────────────────────────────────────────────────── */
