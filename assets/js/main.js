@@ -396,6 +396,12 @@ function render() {
 
   S.players = normalize(S.rows, S.fields, S.settings, S.photoIndex);
 
+  // These tabs are the only way to reach the judging sheets, certificates,
+  // owner packs and the auction console. They used to appear only after a team
+  // draw, which left most of the tool unreachable.
+  $('#view-tabs').hidden = false;
+  $$('#view-tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === S.view));
+
   // The console is a live UI, not a printable page — it replaces the preview.
   const running = S.view === 'auction';
   $('#console').hidden = !running;
@@ -817,6 +823,13 @@ function bindDraft() {
   $('#view-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-view]');
     if (!b) return;
+    // The teams sheet needs a draw first, and would otherwise silently show
+    // the booklet again.
+    if (b.dataset.view === 'draft' && !S.draft) {
+      toast('Draw the teams first — panel 7, “Draw the teams”.');
+      $('#panel-draft').open = true;
+      return;
+    }
     S.view = b.dataset.view;
     $$('#view-tabs button').forEach(x => x.classList.toggle('on', x === b));
     render();
