@@ -18,6 +18,7 @@ Load an Excel or CSV file and AuctionBook gives you:
 - **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
 - **Balanced teams without an auction** — rate the players and it draws squads of near-equal strength.
 - **The registration form itself** — it writes the Google Form that collects your players.
+- **A console that runs the auction** — one lot at a time, bids, and teams that physically cannot overbid.
 - **Judged competitions too** — cooking, rangoli, dance, fancy dress and more, with printable judge score sheets, a scoring workbook that ranks itself, and certificates.
 
 It also **works offline**. Everything is cached on your first visit, so it opens with no connection at all — which is what you want at a ground with no signal. On a phone, "Add to Home Screen" makes it behave like an app.
@@ -104,6 +105,33 @@ git add docs/booklets && git commit -m "Add auction booklet" && git push
 It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.html`.
 
 Note that anyone with the link can read it, so treat it like a public document.
+
+## Running the auction
+
+Everything else prepares for the day or records it afterwards. **Run auction** drives it.
+
+One lot on screen at a time — photo, stats, base price. Raise the bid with the increment buttons, then click the team that won it. The purse comes down, the slot is filled, and the next lot comes up.
+
+**A team that cannot afford the bid is disabled.** Not warned — disabled. The console applies the same reserve arithmetic as the owner packs, so a side holding ₹80,000 with four slots left simply cannot be given a ₹60,000 player. Squads at their maximum drop out too.
+
+**Undo goes back properly.** A misclick two lots ago comes out cleanly — purse, slot and position all restored. Auctioneers misclick.
+
+**It survives a closed laptop.** Every action is written to storage, so reopening resumes exactly where the room is. Reload mid-auction and nothing is lost.
+
+**Unsold players come back.** *Reopen unsold* puts the pile back in the queue and starts the next round.
+
+Keyboard, because an auctioneer works at speaking pace:
+
+| Key | Does |
+| --- | --- |
+| <kbd>1</kbd>…<kbd>9</kbd> | Sell to that team |
+| <kbd>U</kbd> | Unsold |
+| <kbd>S</kbd> | Skip — decide later, stays in the queue |
+| <kbd>Z</kbd> | Undo |
+| <kbd>←</kbd> <kbd>→</kbd> | Change lot |
+| <kbd>+</kbd> <kbd>−</kbd> | Adjust the bid |
+
+**Export results** writes a CSV of every sale. Set **Squad minimum** and **Lowest base price** in panel 4 first — they govern what each team may bid.
 
 ## Documents for team owners
 
@@ -256,6 +284,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/competitions.js` | Judged-competition presets and criteria |
 | `assets/js/judging.js` | Score sheets, certificates, scoring workbook, templates |
 | `assets/js/ownerpack.js` | Team owner purse plans, ledgers and bidding tracker |
+| `assets/js/auctioneer.js` | The console that runs the auction |
 | `assets/js/formbuilder.js` | Generates the Google Form script |
 | `sw.js` | Offline cache |
 | `assets/js/main.js` | Wires up the UI |

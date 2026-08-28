@@ -33,6 +33,9 @@
 }
 
 * { box-sizing: border-box; }
+/* A class-level display rule beats the UA [hidden] rule, so .preview and .con
+   stayed visible when hidden was set. State it explicitly. */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -250,4 +253,93 @@ input[type="file"] { font-size: 12px; width: 100%; }
   .layout { display: block; height: auto; }
   .preview-scroll { overflow: visible; padding: 0; }
   .preview { display: block; gap: 0; }
+}
+
+/* ── auctioneer console ──────────────────────────────────── */
+.con { display: flex; flex-direction: column; gap: 14px; padding: 4px 2px 40px; }
+.con-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 12px; border-bottom: 1px solid var(--line);
+}
+.con-prog { font-size: 15px; font-weight: 600; }
+.con-prog b { color: var(--accent); font-variant-numeric: tabular-nums; }
+.con-round {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+}
+.con-bar .btn { margin-left: 0; }
+.con-bar #c-undo { margin-left: auto; }
+
+.con-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
+@media (max-width: 1000px) { .con-main { grid-template-columns: 1fr; } }
+
+.con-lot {
+  display: flex; gap: 20px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 20px; min-height: 260px; align-items: center;
+}
+.con-photo {
+  width: 180px; height: 220px; flex: none; border-radius: 10px; overflow: hidden;
+  background: var(--surface-2); display: flex; align-items: center; justify-content: center;
+}
+.con-photo img, .con-photo svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.con-info { min-width: 0; }
+.con-lotno {
+  font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent);
+}
+.con-info h2 { margin: 4px 0 2px; font-size: 38px; line-height: 1.1; letter-spacing: -.02em; }
+.con-info .sub { color: var(--ink-2); font-size: 15px; }
+.con-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.con-stat {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px;
+}
+.con-stat dt {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
+}
+.con-stat dd { margin: 1px 0 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.con-basep { margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+.con-basep b { color: var(--accent); font-size: 18px; }
+.con-done { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+
+.con-bid {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.con-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+}
+.con-amount {
+  font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1;
+  font-variant-numeric: tabular-nums; color: var(--accent); margin: 2px 0 10px;
+}
+.con-steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.con-steps .btn { flex: 1 0 auto; font-variant-numeric: tabular-nums; }
+.con-teams { display: flex; flex-direction: column; gap: 6px; }
+.con-team {
+  display: flex; align-items: baseline; gap: 8px; text-align: left; width: 100%;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line-2);
+  background: var(--surface-2); color: var(--ink);
+}
+.con-team:hover:not(:disabled) { border-color: var(--accent); }
+.con-team:disabled { opacity: .4; cursor: not-allowed; }
+.con-team .k { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+.con-team .max { margin-left: auto; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.con-actions { display: flex; gap: 6px; margin-top: 2px; }
+.con-actions .btn { flex: 1; }
+.con-unsold { border-color: #b91c1c; color: #b91c1c; }
+
+.con-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.con-purse {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--accent); border-radius: 9px; padding: 10px 12px;
+}
+.con-purse.spent { border-left-color: var(--ink-3); opacity: .65; }
+.con-purse .n { font-size: 13.5px; font-weight: 700; }
+.con-purse .b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.con-purse .m { font-size: 11.5px; color: var(--ink-3); }
+.con-keys { font-size: 12px; color: var(--ink-3); text-align: center; margin: 0; }
+.con-keys b {
+  font-family: var(--mono); font-size: 11px; background: var(--surface);
+  border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 5px; color: var(--ink-2);
 }

@@ -6,12 +6,14 @@ import { buildAppsScript, buildQuestionList, DEFAULT_FORM } from './formbuilder.
 import { COMPETITIONS, getCompetition, isCompetition, criteriaTotal } from './competitions.js';
 import { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTemplate, workbookBytes } from './judging.js';
 import { buildOwnerPacks, buildOwnerWorkbook } from './ownerpack.js';
+import * as A from './auctioneer.js';
+import { createAuction } from './auctioneer.js';
 import { normalize, buildBook, buildDraftSheet, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
 import { buildShareFile } from './export.js';
 import { buildLiveBoard } from './liveboard.js';
-import { esc } from './format.js';
-import { AVATAR_STYLES } from './avatars.js';
+import { esc, formatMoney } from './format.js';
+import { AVATAR_STYLES, avatarMark } from './avatars.js';
 import { SAMPLE } from './sample-data.js';
 
 const $ = s => document.querySelector(s);
@@ -41,7 +43,7 @@ const S = {
   zoom: 'fit',
   book: null, players: null,
   ratings: {}, ratingsSig: null, draft: null, draftSeed: 1, view: 'booklet',
-  criteria: [],
+  criteria: [], auction: null,
 };
 
 export const BRAND = 'Stunity tech - by Prateek';
@@ -75,6 +77,7 @@ function boot() {
   bindJudging();
   bindTemplates();
   bindOwners();
+  bindAuction();
   bindForm();
   registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
@@ -393,6 +396,17 @@ function render() {
 
   S.players = normalize(S.rows, S.fields, S.settings, S.photoIndex);
 
+  // The console is a live UI, not a printable page — it replaces the preview.
+  const running = S.view === 'auction';
+  $('#console').hidden = !running;
+  $('#preview').hidden = running;
+  if (running) {
+    if (!S.auction) S.auction = loadAuction();
+    $('#page-count').textContent = `${S.players.length} lots`;
+    renderConsole();
+    return;
+  }
+
   if (S.view === 'judge') {
     S.book = buildJudgeSheets(S.players, judgeConfig());
     const n = judgeConfig().judges.length || 1;
@@ -524,6 +538,165 @@ function showView(view) {
   $('#view-tabs').hidden = false;
   $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === view));
   render();
+}
+
+/* ── the auctioneer's console ───────────────────────────────────────────── */
+
+const auctionKey = () => `auctionbook:auction:${slug(S.settings.title || 'auction')}`;
+
+function saveAuction() {
+  try { localStorage.setItem(auctionKey(), JSON.stringify(S.auction)); } catch { /* full or blocked */ }
+}
+
+/** Resume where the room actually is, or start a fresh run. */
+function loadAuction() {
+  if (!S.players?.length) return null;
+  try {
+    const raw = localStorage.getItem(auctionKey());
+    if (raw) {
+      const a = JSON.parse(raw);
+      // Only reuse it if it still matches the loaded player list.
+      const lots = S.players.map(p => p.lot).join('|');
+      if (a.order?.join('|') === lots) return a;
+    }
+  } catch { /* ignore */ }
+  return createAuction(S.players, S.settings);
+}
+
+function bindAuction() {
+  $('#c-undo').addEventListener('click', () => { A.undo(S.auction); afterMove(); });
+  $('#c-skip').addEventListener('click', () => { A.skip(S.auction); afterMove(); });
+  $('#c-unsold').addEventListener('click', () => sellOrPass(null));
+  $('#c-reopen').addEventListener('click', () => {
+    const n = A.unsoldPile(S.auction).length;
+    if (!n) return toast('Nothing in the unsold pile yet.');
+    A.reopenUnsold(S.auction);
+    afterMove();
+    toast(`${n} unsold player${n === 1 ? '' : 's'} back in the queue — round ${S.auction.round}.`);
+  });
+  $('#c-csv').addEventListener('click', () => {
+    download(`${slug(S.settings.title || 'auction')}-results.csv`,
+      A.resultsCsv(S.auction, S.players, S.settings), 'text/csv');
+    toast('Results exported.');
+  });
+  $('#c-reset').addEventListener('click', () => {
+    if (!confirm('Clear every sale and start this auction again?')) return;
+    S.auction = createAuction(S.players, S.settings);
+    afterMove();
+  });
+
+  $('#c-steps').addEventListener('click', e => {
+    const b = e.target.closest('[data-step]');
+    if (!b) return;
+    S.auction.bid = Math.max(0, S.auction.bid + Number(b.dataset.step));
+    afterMove();
+  });
+  $('#c-teams').addEventListener('click', e => {
+    const b = e.target.closest('[data-team]');
+    if (b && !b.disabled) sellOrPass(b.dataset.team);
+  });
+
+  // An auctioneer works at speaking pace, not mouse pace.
+  document.addEventListener('keydown', e => {
+    if (S.view !== 'auction' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    const teams = A.teamStats(S.auction, S.settings);
+    const k = e.key.toLowerCase();
+    if (k >= '1' && k <= '9') {
+      const t = teams[Number(k) - 1];
+      if (t && A.canBid(t, S.auction.bid)) sellOrPass(t.name);
+    } else if (k === 'u') sellOrPass(null);
+    else if (k === 's') { A.skip(S.auction); afterMove(); }
+    else if (k === 'z') { A.undo(S.auction); afterMove(); }
+    else if (e.key === 'ArrowRight') { A.goTo(S.auction, S.auction.idx + 1); afterMove(); }
+    else if (e.key === 'ArrowLeft') { A.goTo(S.auction, S.auction.idx - 1); afterMove(); }
+    else if (e.key === '+' || e.key === '=') { bumpBid(1); }
+    else if (e.key === '-') { bumpBid(-1); }
+    else return;
+    e.preventDefault();
+  });
+}
+
+const bumpBid = dir => {
+  S.auction.bid = Math.max(0, S.auction.bid + dir * A.bidSteps(S.settings)[0]);
+  afterMove();
+};
+
+function sellOrPass(teamName) {
+  const lot = S.auction.order[S.auction.idx];
+  if (!lot || S.auction.results[lot]) return;
+  if (teamName) {
+    if (!S.auction.bid) return toast('Set the winning bid first.', 'error');
+    A.sell(S.auction, lot, teamName, S.auction.bid);
+  } else {
+    A.markUnsold(S.auction, lot);
+  }
+  afterMove();
+}
+
+function afterMove() { saveAuction(); renderConsole(); }
+
+function renderConsole() {
+  if (!S.auction || !S.players?.length) return;
+  const st = S.settings;
+  const money = v => formatMoney(v, st.currency, st.numberFormat);
+  const byLot = new Map(S.players.map(p => [p.lot, p]));
+  const lot = S.auction.order[S.auction.idx];
+  const p = byLot.get(lot);
+  const done = A.progress(S.auction);
+
+  $('#c-prog').innerHTML =
+    `<b>${done.sold}</b> sold · <b>${done.unsold}</b> unsold · <b>${done.left}</b> to call`;
+  $('#c-round').textContent = `Round ${S.auction.round}`;
+
+  // ── the lot on the block ──
+  if (!p || done.left === 0) {
+    $('#c-lot').innerHTML = `<div class="con-done">
+      Every player has been called. ${done.unsold} unsold —
+      use <strong>Reopen unsold</strong> for another round, or export the results.</div>`;
+  } else {
+    const sub = [p.category !== 'All Players' ? p.category : '', ...p.subtitle.map(x => x.value)]
+      .filter(Boolean).join(' · ');
+    $('#c-lot').innerHTML = `
+      <div class="con-photo">${p.photo
+        ? `<img src="${esc(p.photo)}" alt="">`
+        : avatarMark(p, st.avatarStyle, st.accent)}</div>
+      <div class="con-info">
+        <span class="con-lotno">Lot ${esc(p.lot)}</span>
+        <h2>${esc(p.name)}</h2>
+        ${sub ? `<div class="sub">${esc(sub)}</div>` : ''}
+        ${p.stats.length ? `<dl class="con-stats">${p.stats.slice(0, 5).map(s =>
+          `<div class="con-stat"><dt>${esc(s.label)}</dt><dd>${esc(s.value)}</dd></div>`).join('')}</dl>` : ''}
+        ${p.basePrice !== '' ? `<div class="con-basep">Base price
+          <b>${esc(money(p.basePrice))}</b></div>` : ''}
+      </div>`;
+    if (!S.auction.bid) S.auction.bid = A.openingBid(p, st);
+  }
+
+  $('#c-amount').textContent = S.auction.bid ? money(S.auction.bid) : '—';
+  $('#c-steps').innerHTML = A.bidSteps(st).map(v =>
+    `<button class="btn" data-step="${v}">+${money(v)}</button>`).join('')
+    + `<button class="btn" data-step="${-A.bidSteps(st)[0]}">−</button>`;
+
+  // ── who can actually take it ──
+  const teams = A.teamStats(S.auction, st);
+  $('#c-teams').innerHTML = teams.length
+    ? teams.map((t, i) => {
+      const ok = A.canBid(t, S.auction.bid) && done.left > 0;
+      return `<button class="con-team" data-team="${esc(t.name)}" ${ok ? '' : 'disabled'}
+        title="${t.full ? 'Squad full' : `Max bid ${money(t.maxBid)}`}">
+        <span class="k">${i + 1}</span>${esc(t.name)}
+        <span class="max">${t.full ? 'squad full' : `max ${money(t.maxBid)}`}</span>
+      </button>`;
+    }).join('')
+    : '<p class="hint">Add teams in panel 4 to record who wins each player.</p>';
+
+  $('#c-strip').innerHTML = teams.map(t => `
+    <div class="con-purse ${t.balance <= 0 ? 'spent' : ''}">
+      <div class="n">${esc(t.name)}</div>
+      <div class="b">${esc(money(t.balance))}</div>
+      <div class="m">${t.bought} bought · ${t.slotsLeft} slot${t.slotsLeft === 1 ? '' : 's'} to fill</div>
+    </div>`).join('');
 }
 
 /* ── team owner packs ───────────────────────────────────────────────────── */

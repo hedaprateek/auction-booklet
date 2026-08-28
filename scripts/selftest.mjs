@@ -493,6 +493,77 @@ console.log('\nTeam owner packs');
       .match(/'[^']+'!/g).every(r => wb.SheetNames.includes(r.slice(1, -2))));
 }
 
+console.log('\nAuctioneer console');
+{
+  const A = await import('../assets/js/auctioneer.js');
+  const st = {
+    ...SAMPLE.settings, minSquad: 3, maxSquad: 4, minBase: '10000',
+    teamsText: 'Royals, 100000\nHawks, 100000',
+  };
+  const pool = ['a', 'b', 'c', 'd', 'e', 'f'].map((n, i) =>
+    ({ lot: String(i + 1), name: 'P' + n, category: 'X', basePrice: '10000' }));
+  let s = A.createAuction(pool, st);
+
+  check('opens on the first lot', s.idx === 0 && A.pending(s).length === 6);
+  const t0 = A.teamStats(s, st);
+  check('everyone starts on a full purse', t0[0].balance === 100000 && t0[0].slotsLeft === 3);
+  // 100000 with 3 slots and a 10000 base: two slots must be reserved.
+  check('opening max bid reserves the other slots', t0[0].maxBid === 80000, String(t0[0].maxBid));
+
+  A.sell(s, '1', 'Royals', 60000);
+  const t1 = A.teamStats(s, st);
+  check('a sale moves on to the next lot', s.idx === 1);
+  check('purse comes down', t1[0].balance === 40000 && t1[0].spent === 60000);
+  check('a slot is filled', t1[0].bought === 1 && t1[0].slotsLeft === 2);
+  check('max bid tightens', t1[0].maxBid === 30000, String(t1[0].maxBid));
+  check('the other team is untouched', t1[1].balance === 100000);
+
+  check('a team cannot bid past its max', !A.canBid(t1[0], 40000));
+  check('a team can bid up to its max', A.canBid(t1[0], 30000));
+
+  A.markUnsold(s, '2');
+  check('unsold is recorded', A.unsoldPile(s).join() === '2');
+  check('progress adds up', JSON.stringify(A.progress(s)) === JSON.stringify({ sold: 1, unsold: 1, left: 4, total: 6 }));
+
+  // Undo has to put the purse back, not just the label.
+  A.undo(s);
+  check('undo clears the unsold mark', A.unsoldPile(s).length === 0);
+  A.undo(s);
+  const t2 = A.teamStats(s, st);
+  check('undo refunds the purse', t2[0].balance === 100000 && t2[0].bought === 0);
+  check('undo returns to the lot', s.idx === 0);
+  check('undo on an empty history is safe', !!A.undo(A.createAuction(pool, st)));
+
+  // A full squad is out, whatever its balance says.
+  let f = A.createAuction(pool, st);
+  A.sell(f, '1', 'Royals', 10000); A.sell(f, '2', 'Royals', 10000);
+  A.sell(f, '3', 'Royals', 10000); A.sell(f, '4', 'Royals', 10000);
+  const tf = A.teamStats(f, st).find(t => t.name === 'Royals');
+  check('a squad at maximum stops bidding', tf.full && !A.canBid(tf, 1000));
+
+  // Unsold players come back round.
+  let r = A.createAuction(pool, st);
+  A.markUnsold(r, '1'); A.markUnsold(r, '2');
+  check('two in the unsold pile', A.unsoldPile(r).length === 2);
+  A.reopenUnsold(r);
+  check('reopening clears them', A.unsoldPile(r).length === 0);
+  check('they are pending again', A.pending(r).includes('1') && A.pending(r).includes('2'));
+  check('the round number moves on', r.round === 2);
+
+  // Skipping leaves the lot in the queue.
+  let k = A.createAuction(pool, st);
+  A.skip(k);
+  check('skip advances without deciding', k.idx === 1 && A.pending(k).length === 6);
+
+  const csv = A.resultsCsv(s, pool, st);
+  check('csv has just a header when nothing is decided', csv.split('\n').length === 1);
+  A.sell(s, '1', 'Hawks', 25000);
+  check('csv records the sale', A.resultsCsv(s, pool, st).includes('"Hawks","25000"'));
+  check('bid steps scale to the base price',
+    A.bidSteps(st).join() === '2500,5000,10000,20000', A.bidSteps(st).join());
+  check('opening bid follows the base price', A.openingBid(pool[0], st) === 10000);
+}
+
 console.log('\nOffline cache');
 {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
