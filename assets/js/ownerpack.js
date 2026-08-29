@@ -133,6 +133,16 @@ export function buildOwnerPacks(settings, { teamLogos = new Map(), categories = 
       </div>
       ${ownerFoot(settings)}
     `));
+
+    // The rest of the kit: this owner's view of everybody else.
+    const head = kicker => ownerHead(team, logo, settings, money, purse, kicker);
+    if (settings.packAllTeams !== false && teams.length) {
+      pages.push(...allTeamsPages(teams, settings, size, money, head));
+    }
+    if (settings.packSaleLog !== false) {
+      pages.push(...saleLogPages(settings, size, head, Number(settings.packLogPages) || 2));
+    }
+    if (settings.packUnsold !== false) pages.push(unsoldPage(settings, size, head));
   }
 
   const style = `--accent:${cssColor(settings.accent)};--pw:${size.w};--ph:${size.h}`;
@@ -141,6 +151,86 @@ export function buildOwnerPacks(settings, { teamLogos = new Map(), categories = 
     pageCount: pages.length,
     pageSizeCss: size.css,
   };
+}
+
+/* ── sheets for tracking the whole room ─────────────────────────────────── */
+
+/**
+ * Owners do not only watch their own purse — they watch everyone's, because a
+ * rival running out of money changes what you should bid. These are the blank
+ * sheets they keep that on.
+ */
+
+/** Teams across the top, purchases down the side, totals at the foot. */
+function allTeamsPages(teams, s, size, money, head) {
+  const perPage = 4;                      // more than four and the columns die
+  const rows = Math.max(12, Number(s.minSquad) || 11);
+  const groups = [];
+  for (let i = 0; i < teams.length; i += perPage) groups.push(teams.slice(i, i + perPage));
+
+  return groups.map((group, gi) => page('owner-ledger', `
+    ${head(`Every team · ${gi + 1} of ${groups.length}`)}
+    <p class="ow-note">Write each purchase under the team that won it. The totals at
+      the foot are what everyone has left to bid with.</p>
+    <table class="ow-all">
+      <thead>
+        <tr><th class="c-n" rowspan="2">#</th>${group.map(t =>
+          `<th colspan="2">${esc(t.name)}</th>`).join('')}</tr>
+        <tr>${group.map(() => '<th class="c-sub">Player</th><th class="c-sub c-m">Price</th>').join('')}</tr>
+      </thead>
+      <tbody>
+        ${Array.from({ length: rows }, (_, i) => `<tr>
+          <td class="c-n">${i + 1}</td>
+          ${group.map(() => '<td></td><td class="c-m"></td>').join('')}
+        </tr>`).join('')}
+        <tr class="ow-tot"><td class="c-n"></td>${group.map(() =>
+          '<td class="lbl">Spent</td><td class="c-m"></td>').join('')}</tr>
+        <tr class="ow-tot"><td class="c-n"></td>${group.map(t =>
+          `<td class="lbl">Purse left${t.purse ? ` of ${esc(money(num(t.purse)))}` : ''}</td>
+           <td class="c-m"></td>`).join('')}</tr>
+      </tbody>
+    </table>
+    ${ownerFoot(s)}`));
+}
+
+/** One line per sale, in the order the auctioneer calls them. */
+function saleLogPages(s, size, head, pages = 2) {
+  // Row height is 8.4mm; more than this and the table runs off the sheet.
+  const rows = size.rows + 3;
+  return Array.from({ length: pages }, (_, i) => page('owner-ledger', `
+    ${head(`Sale log · sheet ${i + 1} of ${pages}`)}
+    <table class="ow-led">
+      <thead><tr>
+        <th class="c-n">#</th><th class="c-n">Lot</th><th>Player</th>
+        <th class="c-cat">Category</th><th class="c-cat">Sold to</th><th class="c-m">Price</th>
+      </tr></thead>
+      <tbody>${Array.from({ length: rows }, (_, r) => `<tr>
+        <td class="c-n">${i * rows + r + 1}</td><td class="c-n"></td><td></td>
+        <td class="c-cat"></td><td class="c-cat"></td><td class="c-m"></td>
+      </tr>`).join('')}</tbody>
+    </table>
+    ${ownerFoot(s)}`));
+}
+
+/** The pile that comes back round. */
+function unsoldPage(s, size, head) {
+  return page('owner-ledger', `
+    ${head('Unsold register')}
+    <p class="ow-note">Players who went unsold in the first round. Tick them off as they
+      come back up, and note what they finally went for.</p>
+    <table class="ow-led">
+      <thead><tr>
+        <th class="c-n">#</th><th class="c-n">Lot</th><th>Player</th>
+        <th class="c-m">Base</th><th class="c-tick">Called again</th>
+        <th class="c-cat">Sold to</th><th class="c-m">Price</th>
+      </tr></thead>
+      <tbody>${Array.from({ length: size.rows - 1 }, (_, r) => `<tr>
+        <td class="c-n">${r + 1}</td><td class="c-n"></td><td></td>
+        <td class="c-m"></td><td class="c-tick"><i></i></td>
+        <td class="c-cat"></td><td class="c-m"></td>
+      </tr>`).join('')}</tbody>
+    </table>
+    ${ownerFoot(s)}`);
 }
 
 const ownerHead = (team, logo, s, money, purse, kicker = "Team owner's pack") => `

@@ -168,6 +168,10 @@
         </div>
         <label class="field"><span>Lowest base price</span><input type="text" id="s-minbase" placeholder="10000"></label>
         <p class="hint">Used to work out what an owner can still bid: their balance minus the money they must keep back to fill the rest of their squad.</p>
+        <label class="check"><input type="checkbox" id="s-packall" checked> Include an all-teams tracker in each pack</label>
+        <label class="check"><input type="checkbox" id="s-packlog" checked> Include a sale log (who went to whom)</label>
+        <label class="check"><input type="checkbox" id="s-packunsold" checked> Include an unsold register</label>
+        <p class="hint">Owners watch every purse, not just their own — a rival running out of money changes what you should bid.</p>
         <button id="btn-ownerpack" class="btn btn-primary btn-block">Show team owner packs</button>
         <button id="btn-ownerbook" class="btn btn-block">Download bidding tracker <code>.xlsx</code></button>
         <p class="hint">A pack per owner: purse plan, a bid-by-bid ladder of what they can afford, a squad checklist and a ledger to write purchases into. The workbook does the same arithmetic live.</p>

@@ -33,6 +33,7 @@ const DEFAULTS = {
   ratingSource: 'manual', ratingColumn: '', avatarStyle: 'monogram',
   judges: '', noun: '', criteria: null,
   minSquad: 11, maxSquad: 14, minBase: '',
+  packAllTeams: true, packSaleLog: true, packUnsold: true, packLogPages: 2,
 };
 
 const S = {
@@ -284,6 +285,8 @@ const BINDINGS = [
   ['#s-tracker', 'tracker', 'checked'], ['#s-qrlink', 'qrLink', 'value'],
   ['#s-minsquad', 'minSquad', 'number'], ['#s-maxsquad', 'maxSquad', 'number'],
   ['#s-minbase', 'minBase', 'value'],
+  ['#s-packall', 'packAllTeams', 'checked'], ['#s-packlog', 'packSaleLog', 'checked'],
+  ['#s-packunsold', 'packUnsold', 'checked'],
 ];
 
 function bindSettings() {

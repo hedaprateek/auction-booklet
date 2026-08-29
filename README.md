@@ -167,6 +167,14 @@ The booklet tells owners who is up for auction. It does not help them bid. Panel
 
 **A squad checklist** by category, so nobody reaches the last round still needing two keepers.
 
+**An all-teams tracker.** Every team across the top, purchases down the side, Spent and Purse-left along the foot. Owners watch everyone's money, not just their own — a rival running dry changes what you should bid. Splits across pages beyond four teams.
+
+**A sale log.** One line per sale in the order they are called: lot, player, category, sold to, price. Two sheets by default.
+
+**An unsold register.** The pile that comes back round, with a tick box and room for what they finally went for.
+
+Each of the three can be switched off in panel 4 if you would rather print less.
+
 **A bidding tracker** (`.xlsx`, one tab per team). The owner types the price they paid; spent, balance, slots left and max bid update themselves. An *All teams* tab shows every purse at once.
 
 ### The number that governs the bid

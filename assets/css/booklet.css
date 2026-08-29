@@ -643,3 +643,27 @@
 .fx-spot-text .fx-band { margin-top: calc(var(--u) * 2); }
 
 @media print { .flex-banner { box-shadow: none; } }
+
+/* ── owner: all-teams grid, sale log, unsold register ────── */
+.bk .ow-all { width: 100%; border-collapse: collapse; font-size: 8.5pt; flex: none; }
+.bk .ow-all th {
+  background: var(--tint); border: .6pt solid var(--line);
+  padding: 1.6mm 1.2mm; font-size: 7pt; font-weight: 700; text-align: center;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2);
+}
+.bk .ow-all th.c-sub { font-size: 6pt; font-weight: 400; letter-spacing: .02em; }
+.bk .ow-all td { border: .6pt solid var(--line); height: 8mm; padding: 0 1.2mm; }
+.bk .ow-all .c-n { width: 7mm; text-align: center; color: var(--ink-3);
+  font-variant-numeric: tabular-nums; }
+.bk .ow-all .c-m { width: 16mm; }
+.bk .ow-all tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent) 3%, #fff); }
+.bk .ow-all .ow-tot td { background: var(--tint); height: 9mm; }
+.bk .ow-all .ow-tot .lbl {
+  font-size: 6.5pt; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-2); text-align: right;
+}
+.bk .ow-led .c-tick { width: 20mm; text-align: center; }
+.bk .ow-led .c-tick i {
+  display: inline-block; width: 4mm; height: 4mm;
+  border: .6pt solid var(--ink-3); border-radius: .8mm;
+}

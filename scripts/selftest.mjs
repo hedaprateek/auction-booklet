@@ -464,8 +464,9 @@ console.log('\nTeam owner packs');
     ...SAMPLE.settings, theme: 'classic', pageSize: 'a4', accent: '#166534',
     minSquad: 11, maxSquad: 14, minBase: '10000',
   };
-  const pack = buildOwnerPacks(os, { categories: ['Batter', 'Bowler'] });
-  check('two pages per team', pack.pageCount === parseTeams(os.teamsText).length * 2,
+  const pack = buildOwnerPacks({ ...os, packAllTeams: false, packSaleLog: false, packUnsold: false },
+    { categories: ['Batter', 'Bowler'] });
+  check('plan and ledger per team', pack.pageCount === parseTeams(os.teamsText).length * 2,
     String(pack.pageCount));
   check('every team is named', parseTeams(os.teamsText).every(t => pack.html.includes(t.name)));
   check('ladder covers every squad slot',
@@ -473,6 +474,30 @@ console.log('\nTeam owner packs');
   check('ledger opens with the purse', pack.html.includes('Opening purse'));
   check('squad checklist rendered', pack.html.includes('ow-cat'));
   check('no undefined leaked', !pack.html.includes('undefined'));
+
+  // The sheets an owner uses to track the whole room, not just their own purse.
+  const full = buildOwnerPacks({ ...os, packAllTeams: true, packSaleLog: true, packUnsold: true },
+    { categories: ['Batter'] });
+  const nTeams = parseTeams(os.teamsText).length;
+  check('all-teams tracker is included', full.html.includes('ow-grid'));
+  check('every team is a column on it',
+    parseTeams(os.teamsText).every(t => (full.html.match(new RegExp(t.name, 'g')) || []).length >= 2));
+  check('tracker totals spent and purse left',
+    full.html.includes('>Spent<') && full.html.includes('Purse left'));
+  check('sale log records who went to whom',
+    full.html.includes('>Sold to<') && full.html.includes('Sale log'));
+  check('unsold register is included', full.html.includes('Unsold register'));
+  check('each owner gets the whole kit',
+    full.pageCount === nTeams * (2 + 1 + 2 + 1), String(full.pageCount));
+
+  const lean = buildOwnerPacks({ ...os, packAllTeams: false, packSaleLog: false, packUnsold: false }, {});
+  check('the extra sheets can be turned off', lean.pageCount === nTeams * 2, String(lean.pageCount));
+  check('turning them off drops the markup too', !lean.html.includes('ow-all'));
+
+  const many = buildOwnerPacks({ ...os, teamsText: Array.from({ length: 9 },
+    (_, i) => `Team ${i + 1}, 100000`).join('\n') }, {});
+  check('nine teams split the tracker across pages',
+    (many.html.match(/Every team ·/g) || []).length === 9 * 3, 'groups of four');
 
   const wb = XLSX.read(workbookBytes(buildOwnerWorkbook(os)), { type: 'array' });
   check('a tab per team plus summary and help',
