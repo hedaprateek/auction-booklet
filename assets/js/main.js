@@ -7,6 +7,7 @@ import { COMPETITIONS, getCompetition, isCompetition, criteriaTotal } from './co
 import { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTemplate, workbookBytes } from './judging.js';
 import { buildOwnerPacks, buildOwnerWorkbook } from './ownerpack.js';
 import * as A from './auctioneer.js';
+import { FLEX_SIZES, FLEX_TEMPLATES, buildFlex, squadFor, teamNames, teamLogoFor } from './flex.js';
 import { createAuction } from './auctioneer.js';
 import { normalize, buildBook, buildDraftSheet, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
@@ -43,7 +44,7 @@ const S = {
   zoom: 'fit',
   book: null, players: null,
   ratings: {}, ratingsSig: null, draft: null, draftSeed: 1, view: 'booklet',
-  criteria: [], auction: null,
+  criteria: [], auction: null, flexBg: '',
 };
 
 export const BRAND = 'Stunity tech - by Prateek';
@@ -78,6 +79,7 @@ function boot() {
   bindTemplates();
   bindOwners();
   bindAuction();
+  bindFlex();
   bindForm();
   registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
@@ -413,7 +415,13 @@ function render() {
     return;
   }
 
-  if (S.view === 'judge') {
+  if (S.view === 'flex') {
+    const cfg = flexConfig();
+    const f = buildFlex(cfg, flexContext(cfg));
+    S.book = { html: f.html, pageCount: 1, pageSizeCss: f.pageSizeCss };
+    $('#page-count').textContent = `Flex banner · ${f.label}`;
+    updateFlexNote();
+  } else if (S.view === 'judge') {
     S.book = buildJudgeSheets(S.players, judgeConfig());
     const n = judgeConfig().judges.length || 1;
     $('#page-count').textContent =
@@ -462,9 +470,11 @@ function bindZoom() {
 }
 
 function applyZoom() {
-  const bk = $('#preview .bk');
+  // A flex banner is not a .bk of pages — without this it sat at full size
+  // (a 6 ft banner is 6912px wide) and the preview showed a fragment of it.
+  const bk = $('#preview .bk') || $('#preview .flexwrap');
   if (!bk) return;
-  const page = bk.querySelector('.page');
+  const page = bk.querySelector('.page') || bk.querySelector('.flex-banner');
   if (!page) return;
   bk.style.transform = 'none';
   const pw = page.getBoundingClientRect().width;
@@ -544,6 +554,122 @@ function showView(view) {
   $('#view-tabs').hidden = false;
   $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === view));
   render();
+}
+
+/* ── flex banner ────────────────────────────────────────────────────────── */
+
+const FLEX_FIELDS = [
+  ['#x-kicker', 'kicker'], ['#x-title', 'title'], ['#x-sub', 'subtitle'],
+  ['#x-date', 'date'], ['#x-venue', 'venue'], ['#x-blurb', 'blurb'],
+  ['#x-footer', 'footer'], ['#x-sponsors', 'sponsors'],
+];
+
+function flexConfig() {
+  const c = { accent: S.settings.accent, logo: S.settings.logo, bg: S.flexBg };
+  for (const [sel, k] of FLEX_FIELDS) c[k] = $(sel).value;
+  c.sizeId = $('#x-size').value;
+  c.template = $('#x-tpl').value;
+  c.customW = $('#x-w').value;
+  c.customH = $('#x-h').value;
+  c.dark = $('#x-dark').checked;
+  c.safe = $('#x-safe').checked;
+  c.bgOpacity = Number($('#x-bgop').value) / 100;
+  c.teamName = $('#x-team').value;
+  c.teamLogo = teamLogoFor(c.teamName, S.teamLogos);
+  return c;
+}
+
+function flexContext(cfg) {
+  const ctx = { settings: S.settings };
+  if (cfg.template === 'squad') {
+    ctx.squad = squadFor(cfg.teamName, { auction: S.auction, draft: S.draft, players: S.players });
+  } else if (cfg.template === 'spotlight') {
+    ctx.spotlight = S.players?.find(p => p.lot === $('#x-player').value) || S.players?.[0];
+  } else if (cfg.template === 'winners') {
+    // Top three by price paid, once the auction has run.
+    const sold = S.auction ? A.soldLots(S.auction) : [];
+    const byLot = new Map((S.players || []).map(p => [p.lot, p]));
+    ctx.winners = sold
+      .map(lot => ({ ...byLot.get(lot), note: S.auction.results[lot].team,
+        price: Number(S.auction.results[lot].price) || 0 }))
+      .sort((a, b) => b.price - a.price).slice(0, 3);
+    if (!ctx.winners.length) ctx.winners = (S.players || []).slice(0, 3).map(p => ({ ...p, note: '' }));
+  } else if (cfg.template === 'event') {
+    ctx.facts = [
+      S.players?.length ? { n: S.players.length, l: 'Players' } : null,
+      teamNames(S.settings, S.draft).length
+        ? { n: teamNames(S.settings, S.draft).length, l: 'Teams' } : null,
+    ].filter(Boolean);
+  }
+  return ctx;
+}
+
+function bindFlex() {
+  $('#x-size').innerHTML = FLEX_SIZES.map(s =>
+    `<option value="${s.id}">${esc(s.label)}</option>`).join('');
+  $('#x-tpl').innerHTML = FLEX_TEMPLATES.map(t =>
+    `<option value="${t.id}">${esc(t.label)}</option>`).join('');
+
+  const live = () => { if (S.view === 'flex') render(); else updateFlexNote(); };
+  for (const [sel] of FLEX_FIELDS) $(sel).addEventListener('input', live);
+  ['#x-size', '#x-tpl', '#x-w', '#x-h', '#x-dark', '#x-safe', '#x-bgop', '#x-team', '#x-player']
+    .forEach(sel => $(sel).addEventListener('input', () => { flexPickers(); live(); }));
+
+  $('#x-bg').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (!f) { S.flexBg = ''; return live(); }
+    try {
+      // Banners are big; keep the source generous so it does not go soft.
+      S.flexBg = await resizeToDataURL(f, 2000);
+      live();
+    } catch { toast('That image could not be read.', 'error'); }
+  });
+
+  $('#x-show').addEventListener('click', () => { seedFlex(); showView('flex'); });
+  $('#x-print').addEventListener('click', () => {
+    seedFlex();
+    showView('flex');
+    setTimeout(() => {
+      const el = $('#preview .flex-banner');
+      if (el) { el.style.transform = 'none'; }
+      window.print();
+      applyZoom();
+    }, 250);
+  });
+}
+
+/** Fill the banner from the booklet's own settings the first time. */
+function seedFlex() {
+  const set = (sel, v) => { const el = $(sel); if (!el.dataset.touched && !el.value && v) el.value = v; };
+  set('#x-title', S.settings.title);
+  set('#x-sub', S.settings.subtitle);
+  set('#x-footer', S.settings.footer);
+  set('#x-kicker', 'Auction');
+  flexPickers();
+}
+
+function flexPickers() {
+  const tpl = $('#x-tpl').value;
+  $('#x-team-wrap').hidden = tpl !== 'squad';
+  $('#x-player-wrap').hidden = tpl !== 'spotlight';
+
+  const teams = teamNames(S.settings, S.draft);
+  const keepT = $('#x-team').value;
+  $('#x-team').innerHTML = teams.map(t => `<option>${esc(t)}</option>`).join('');
+  if (teams.includes(keepT)) $('#x-team').value = keepT;
+
+  const keepP = $('#x-player').value;
+  $('#x-player').innerHTML = (S.players || []).map(p =>
+    `<option value="${esc(p.lot)}">${esc(p.lot)} · ${esc(p.name)}</option>`).join('');
+  if (keepP) $('#x-player').value = keepP;
+}
+
+function updateFlexNote() {
+  const f = buildFlex(flexConfig(), flexContext(flexConfig()));
+  $('#x-note').innerHTML = `Prints as one page at <strong>${esc(f.label)}</strong>
+    (${f.wIn} × ${f.hIn} in). In the print dialog choose <strong>Save as PDF</strong>,
+    margins <strong>None</strong>, and turn on <strong>background graphics</strong>.
+    Hand that PDF to the flex shop.`;
 }
 
 /* ── the auctioneer's console ───────────────────────────────────────────── */

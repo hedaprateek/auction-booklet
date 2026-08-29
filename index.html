@@ -285,8 +285,43 @@
       </div>
     </details>
 
+    <details class="panel" id="panel-flex">
+      <summary>9 · Flex banner</summary>
+      <div class="panel-body">
+        <p class="hint">Artwork for the vinyl banner on the society gate. Laid out at real size and printed to PDF, which is what a flex shop wants.</p>
+        <div class="row2">
+          <label class="field"><span>Size</span><select id="x-size"></select></label>
+          <label class="field"><span>Layout</span><select id="x-tpl"></select></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Custom width <em>(ft)</em></span><input type="number" id="x-w" min="1" max="40" step="0.5" placeholder="—"></label>
+          <label class="field"><span>Custom height <em>(ft)</em></span><input type="number" id="x-h" min="1" max="40" step="0.5" placeholder="—"></label>
+        </div>
+        <label class="field"><span>Eyebrow</span><input type="text" id="x-kicker" placeholder="Presenting"></label>
+        <label class="field"><span>Headline</span><input type="text" id="x-title" placeholder="Riverside Premier League"></label>
+        <label class="field"><span>Sub-headline</span><input type="text" id="x-sub" placeholder="Season 4"></label>
+        <div class="row2">
+          <label class="field"><span>Date</span><input type="text" id="x-date" placeholder="Sun 14 March"></label>
+          <label class="field"><span>Venue</span><input type="text" id="x-venue" placeholder="Riverside Ground"></label>
+        </div>
+        <label class="field"><span>Message</span><textarea id="x-blurb" rows="2" placeholder="All residents welcome"></textarea></label>
+        <label class="field"><span>Contact line</span><input type="text" id="x-footer" placeholder="Organised by … · 98xxxxxx01"></label>
+        <label class="field"><span>Sponsors <em>(one per line)</em></span><textarea id="x-sponsors" rows="3"></textarea></label>
+        <label class="field" id="x-team-wrap" hidden><span>Team</span><select id="x-team"></select></label>
+        <label class="field" id="x-player-wrap" hidden><span>Player</span><select id="x-player"></select></label>
+        <label class="field"><span>Background photo <em>(optional)</em></span><input type="file" id="x-bg" accept="image/*"></label>
+        <label class="field"><span>Background strength</span><input type="range" id="x-bgop" min="0" max="100" value="25"></label>
+        <label class="check"><input type="checkbox" id="x-dark"> Dark background</label>
+        <label class="check"><input type="checkbox" id="x-safe" checked> Show safe-area guide</label>
+        <p class="hint">The dashed line is what a printer may trim. Keep text inside it. The guide is not printed.</p>
+        <button id="x-show" class="btn btn-primary btn-block">Show the banner</button>
+        <button id="x-print" class="btn btn-block">Print at true size</button>
+        <p class="hint" id="x-note"></p>
+      </div>
+    </details>
+
     <details class="panel" id="panel-share">
-      <summary>9 · Share</summary>
+      <summary>10 · Share</summary>
       <div class="panel-body">
         <label class="field">
           <span>Link for the cover QR code</span>
@@ -323,6 +358,7 @@
         <button data-view="certs">Certificates</button>
         <button data-view="owners">Owners</button>
         <button data-view="auction">Run auction</button>
+        <button data-view="flex">Flex banner</button>
       </div>
       <span id="page-count" class="muted">No booklet yet</span>
       <div class="zoom">

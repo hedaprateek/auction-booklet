@@ -522,3 +522,124 @@
   margin-top: 5mm; padding-top: 2.5mm; border-top: .6pt solid var(--line);
   display: flex; justify-content: space-between; font-size: 7pt; color: var(--ink-3); flex: none;
 }
+
+/* ── flex banner ─────────────────────────────────────────────
+   Laid out at true print size: a 6 × 4 ft banner is 72 × 48in.
+   Every size is a multiple of --u (1% of banner height), so one
+   template holds together from a 2 ft notice to a 10 ft stage. */
+.flexwrap { display: flex; justify-content: center; }
+.flex-banner {
+  width: var(--fw); height: var(--fh);
+  overflow-wrap: break-word;
+  position: relative; overflow: hidden;
+  background: var(--ground); color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  box-shadow: 0 2px 10px rgba(0,0,0,.13);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  break-after: page; page-break-after: always;
+}
+.fx-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0;
+}
+.fx-inner {
+  position: relative; z-index: 1; height: 100%;
+  padding: calc(var(--u) * 7);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 3);
+}
+/* Printers trim a little off every edge; this shows what is safe. */
+.flex-banner.safe::after {
+  content: ""; position: absolute; inset: calc(var(--u) * 5);
+  border: calc(var(--u) * .3) dashed rgba(128,128,128,.85);
+  z-index: 3; pointer-events: none;
+}
+
+.fx-stack { text-align: center; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; flex: 1; gap: calc(var(--u) * 2); }
+.fx-stack.tight { flex: none; gap: calc(var(--u) * 1.2); }
+/* A centred flex item sizes to max-content, so a long headline ran off the
+   edge instead of wrapping. Constrain every child to the banner width. */
+.fx-stack > *, .fx-spot-text > * { max-width: 100%; }
+.fx-logo { height: calc(var(--u) * 16); max-width: 45%; object-fit: contain; }
+.fx-kicker {
+  font-size: calc(var(--u) * 4.2); font-weight: 700; letter-spacing: .28em;
+  text-transform: uppercase; color: var(--accent);
+}
+.fx-title {
+  margin: 0; line-height: 1.02; font-weight: 800;
+  letter-spacing: -.02em; text-wrap: balance;
+  /* Capped against the WIDTH as well as the short edge: on a 3 ft standee a
+     headline sized only from the short edge still ran off the sides. */
+  font-size: min(calc(var(--u) * 17), calc(var(--fw) * .11));
+}
+.fx-sub { font-size: calc(var(--u) * 6); opacity: .78; }
+.fx-blurb { margin: 0; font-size: calc(var(--u) * 4.4); line-height: 1.4; opacity: .82; max-width: 80%; }
+
+.fx-facts { display: flex; flex-wrap: wrap; justify-content: center;
+  gap: calc(var(--u) * 3) calc(var(--u) * 8); margin-top: calc(var(--u) * 2); max-width: 100%; }
+.fx-facts b { display: block; font-size: calc(var(--u) * 12); color: var(--accent); line-height: 1; }
+.fx-facts span { font-size: calc(var(--u) * 3.4); letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+
+.fx-band {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: calc(var(--u) * 3); background: var(--accent); color: #fff;
+  padding: calc(var(--u) * 2.6) calc(var(--u) * 4); border-radius: calc(var(--u) * 1.5);
+  font-size: calc(var(--u) * 5); font-weight: 700; margin-top: auto;
+}
+.fx-band i { width: calc(var(--u) * .8); height: calc(var(--u) * .8); border-radius: 50%; background: #fff; opacity: .7; }
+.fx-foot { text-align: center; font-size: calc(var(--u) * 3.4); opacity: .72; }
+.fx-sponsors { text-align: center; border-top: calc(var(--u) * .2) solid currentColor;
+  padding-top: calc(var(--u) * 2); opacity: .85; }
+.fx-sp-label { font-size: calc(var(--u) * 2.6); letter-spacing: .2em; text-transform: uppercase; opacity: .6; }
+.fx-sp-list { display: flex; flex-wrap: wrap; justify-content: center;
+  gap: calc(var(--u) * 1) calc(var(--u) * 4); margin-top: calc(var(--u) * 1);
+  font-size: calc(var(--u) * 3.6); font-weight: 700; }
+
+/* squad grid */
+/* Rows are 1fr of whatever height is left, and each photo fills its cell.
+   An aspect-ratio here would size from the WIDTH and overflow the banner. */
+.fx-squad { flex: 1; min-height: 0; display: grid; gap: calc(var(--u) * 2.5);
+  grid-template-columns: repeat(var(--cols, 4), 1fr); grid-auto-rows: 1fr; }
+.fx-p { margin: 0; text-align: center; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.fx-p-img {
+  flex: 1; min-height: 0; border-radius: calc(var(--u) * 1.5); overflow: hidden;
+  background: rgba(128,128,128,.15); border: calc(var(--u) * .35) solid var(--accent);
+}
+.fx-p-img img, .fx-p-img svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fx-p .n { display: block; flex: none; font-size: calc(var(--u) * 3.2); font-weight: 700;
+  margin-top: calc(var(--u) * .8); line-height: 1.15; }
+.fx-p .m { display: block; flex: none; font-size: calc(var(--u) * 2.6); opacity: .7; }
+
+/* winners */
+.fx-winners { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  gap: calc(var(--u) * 4); }
+.fx-w { text-align: center; flex: 1 1 0; min-width: 0; max-width: 32%;
+  display: flex; flex-direction: column; min-height: 0; }
+/* First place is emphasised with a heavier ring, not transform: scale() —
+   a scale overflows the banner without taking up layout space to prove it. */
+.fx-w[data-place="1"] .fx-w-img { border-width: calc(var(--u) * 1.5); }
+.fx-w[data-place="1"] .fx-w-name { font-size: calc(var(--u) * 6.5); }
+.fx-w-img { flex: 1; min-height: 0; aspect-ratio: 1; margin: 0 auto; max-width: 100%; border-radius: 50%; overflow: hidden;
+  border: calc(var(--u) * .8) solid var(--accent); background: rgba(128,128,128,.15); }
+.fx-w-img img, .fx-w-img svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fx-w-place { font-size: calc(var(--u) * 4.5); font-weight: 800; color: var(--accent);
+  letter-spacing: .1em; text-transform: uppercase; margin-top: calc(var(--u) * 1.5); }
+.fx-w-name { font-size: calc(var(--u) * 5.5); font-weight: 700; line-height: 1.1; }
+.fx-w-note { font-size: calc(var(--u) * 3); opacity: .72; }
+
+/* spotlight */
+.fx-spot { display: flex; gap: calc(var(--u) * 5); height: 100%; align-items: center; }
+.fx-spot-img { flex: 0 0 42%; aspect-ratio: 3 / 4; max-height: 100%;
+  border-radius: calc(var(--u) * 2); overflow: hidden; background: rgba(128,128,128,.15);
+  border: calc(var(--u) * .5) solid var(--accent); }
+.fx-spot-img img, .fx-spot-img svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fx-spot-text { flex: 1; min-width: 0; display: flex; flex-direction: column;
+  gap: calc(var(--u) * 2); align-items: flex-start; text-align: left; }
+.fx-spot-text .fx-title { font-size: min(calc(var(--u) * 13), calc(var(--fw) * .075)); }
+.fx-spot-stats { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 4); }
+.fx-spot-stats b { display: block; font-size: calc(var(--u) * 9); color: var(--accent); line-height: 1; }
+.fx-spot-stats span { font-size: calc(var(--u) * 2.8); letter-spacing: .12em;
+  text-transform: uppercase; opacity: .7; }
+.fx-spot-text .fx-band { margin-top: calc(var(--u) * 2); }
+
+@media print { .flex-banner { box-shadow: none; } }

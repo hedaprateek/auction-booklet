@@ -18,6 +18,7 @@ Load an Excel or CSV file and AuctionBook gives you:
 - **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
 - **Balanced teams without an auction** — rate the players and it draws squads of near-equal strength.
 - **The registration form itself** — it writes the Google Form that collects your players.
+- **Flex banners for the society gate** — laid out at true print size and exported as PDF for the flex shop.
 - **A console that runs the auction** — one lot at a time, bids, and teams that physically cannot overbid.
 - **Judged competitions too** — cooking, rangoli, dance, fancy dress and more, with printable judge score sheets, a scoring workbook that ranks itself, and certificates.
 
@@ -105,6 +106,29 @@ git add docs/booklets && git commit -m "Add auction booklet" && git push
 It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.html`.
 
 Note that anyone with the link can read it, so treat it like a public document.
+
+## Flex banners
+
+The vinyl sheet for the society gate. Panel 9 lays out artwork **at true print size** — a 6 × 4 ft banner is a 72 × 48 inch page — and prints it to PDF, which is what a flex shop wants. Text stays vector, so it is sharp however large it is blown up, and photos ride along embedded.
+
+Sizes: 6×4, 8×4, 10×6 (landscape), 4×6, 3×6 standee, 2×3 notice board, or type your own in feet.
+
+Four layouts:
+
+| Layout | For |
+| --- | --- |
+| **Event announcement** | Headline, date, venue, sponsor strip — the one on the gate |
+| **Team squad** | A team's players with photos, names and prices |
+| **Winners** | First, second, third with photos |
+| **Player spotlight** | One player large, with their stats |
+
+Squad and winners pull from the auction results if you have run one, then a drawn team, then the Team column — so the banner shows who actually got bought.
+
+Text, background photo, dark mode and a sponsor list are all editable. The dashed **safe-area guide** marks what a printer may trim; keep text inside it. It does not print.
+
+Everything scales from the banner's shorter edge, so one layout holds together from a 2 ft notice to a 10 ft stage backdrop.
+
+**To print:** *Print at true size* → **Save as PDF**, margins **None**, background graphics **on**. Hand that file to the shop.
 
 ## Running the auction
 
@@ -285,6 +309,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/judging.js` | Score sheets, certificates, scoring workbook, templates |
 | `assets/js/ownerpack.js` | Team owner purse plans, ledgers and bidding tracker |
 | `assets/js/auctioneer.js` | The console that runs the auction |
+| `assets/js/flex.js` | Flex banner artwork at true print size |
 | `assets/js/formbuilder.js` | Generates the Google Form script |
 | `sw.js` | Offline cache |
 | `assets/js/main.js` | Wires up the UI |
