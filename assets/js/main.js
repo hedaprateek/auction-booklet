@@ -5,7 +5,7 @@ import { balanceTeams, teamSpread, teamsAsText } from './teams.js';
 import { buildAppsScript, buildQuestionList, DEFAULT_FORM } from './formbuilder.js';
 import { COMPETITIONS, getCompetition, isCompetition, criteriaTotal } from './competitions.js';
 import { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTemplate, workbookBytes } from './judging.js';
-import { buildOwnerPacks, buildOwnerWorkbook } from './ownerpack.js';
+import { buildOwnerPacks, buildOwnerSheet, buildOwnerWorkbook } from './ownerpack.js';
 import * as A from './auctioneer.js';
 import { FLEX_SIZES, FLEX_TEMPLATES, buildFlex, squadFor, teamNames, teamLogoFor } from './flex.js';
 import { QR_LAYOUTS, parseQrList, buildQrSheet, upiUri } from './qrsheet.js';
@@ -34,7 +34,8 @@ const DEFAULTS = {
   ratingSource: 'manual', ratingColumn: '', avatarStyle: 'monogram',
   judges: '', noun: '', criteria: null,
   minSquad: 11, maxSquad: 14, minBase: '',
-  packAllTeams: true, packSaleLog: true, packUnsold: true, packLogPages: 2,
+  packStyle: 'single',
+  packAllTeams: false, packSaleLog: false, packUnsold: false, packLogPages: 2,
   qrList: '', qrLayout: 'grid4', qrShowUrl: true, qrHeading: true,
 };
 
@@ -85,6 +86,7 @@ function boot() {
   bindFlex();
   bindQr();
   bindForm();
+  syncTabs();
   registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
 }
@@ -144,6 +146,18 @@ function bindData() {
 
   $('#btn-load-sample').addEventListener('click', loadSample);
   $('#btn-load-sample-2').addEventListener('click', loadSample);
+
+  // The standalone tools are the way in when there is no player list at all.
+  $('#btn-go-qr').addEventListener('click', () => {
+    $('#panel-qr').open = true;
+    $('#panel-qr').scrollIntoView({ block: 'start' });
+    $('#q-list').focus();
+  });
+  $('#btn-go-form').addEventListener('click', () => {
+    $('#panel-form').open = true;
+    $('#panel-form').scrollIntoView({ block: 'start' });
+    $('#f-title').focus();
+  });
 }
 
 async function loadFile(file) {
@@ -288,6 +302,7 @@ const BINDINGS = [
   ['#s-tracker', 'tracker', 'checked'], ['#s-qrlink', 'qrLink', 'value'],
   ['#s-minsquad', 'minSquad', 'number'], ['#s-maxsquad', 'maxSquad', 'number'],
   ['#s-minbase', 'minBase', 'value'],
+  ['#s-packstyle', 'packStyle', 'value'],
   ['#s-packall', 'packAllTeams', 'checked'], ['#s-packlog', 'packSaleLog', 'checked'],
   ['#s-packunsold', 'packUnsold', 'checked'],
 ];
@@ -398,17 +413,57 @@ function refresh() {
   timer = setTimeout(render, 90);
 }
 
+// Views that are general tools, not auction output — they need no player list.
+const STANDALONE_VIEWS = ['qr'];
+
+/**
+ * The tabs are always on show so the standalone tools are reachable with no
+ * spreadsheet at all; the ones that need a player list are dimmed until there
+ * is one, rather than hidden.
+ */
+function syncTabs() {
+  $$('#view-tabs button').forEach(b => {
+    b.classList.toggle('on', b.dataset.view === S.view);
+    b.classList.toggle('needs-data', !S.rows.length && !STANDALONE_VIEWS.includes(b.dataset.view));
+  });
+}
+
+/** The printed page size changes per view — a banner is not an A4 booklet. */
+function setPrintSize(css) {
+  let ps = document.getElementById('print-style');
+  if (!ps) {
+    ps = document.createElement('style');
+    ps.id = 'print-style';
+    document.head.appendChild(ps);
+  }
+  ps.textContent = `@page { size: ${css}; margin: 0; }`;
+}
+
 function render() {
-  if (!S.rows.length) return;
+  if (!S.rows.length && !STANDALONE_VIEWS.includes(S.view)) return;
   $('#empty-state').classList.add('hidden');
+  $('#console').hidden = true;
+  $('#preview').hidden = false;
+
+  // A general tool renders on its own, before anything that needs the sheet.
+  if (STANDALONE_VIEWS.includes(S.view) && !S.rows.length) {
+    const sheet = buildQrSheet(parseQrList(S.settings.qrList), S.settings);
+    S.book = sheet;
+    $('#page-count').textContent =
+      `${sheet.count} QR code${sheet.count === 1 ? '' : 's'} · ${sheet.pageCount} page${sheet.pageCount === 1 ? '' : 's'}`;
+    $('#preview').innerHTML = sheet.html;
+    setPrintSize(sheet.pageSizeCss);
+    syncTabs();
+    applyZoom();
+    return;
+  }
 
   S.players = normalize(S.rows, S.fields, S.settings, S.photoIndex);
 
   // These tabs are the only way to reach the judging sheets, certificates,
   // owner packs and the auction console. They used to appear only after a team
   // draw, which left most of the tool unreachable.
-  $('#view-tabs').hidden = false;
-  $$('#view-tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === S.view));
+  syncTabs();
 
   // The console is a live UI, not a printable page — it replaces the preview.
   const running = S.view === 'auction';
@@ -441,9 +496,11 @@ function render() {
     S.book = buildCertificates(S.players, judgeConfig());
     $('#page-count').textContent = `${S.book.pageCount} certificates`;
   } else if (S.view === 'owners') {
-    S.book = buildOwnerPacks(S.settings, { teamLogos: S.teamLogos, categories: ownerCategories() });
+    S.book = S.settings.packStyle === 'full'
+      ? buildOwnerPacks(S.settings, { teamLogos: S.teamLogos, categories: ownerCategories() })
+      : buildOwnerSheet(S.settings, { teamLogos: S.teamLogos });
     const t = parseTeams(S.settings.teamsText).length;
-    $('#page-count').textContent = `${t} owner pack${t === 1 ? '' : 's'} · ${S.book.pageCount} pages`;
+    $('#page-count').textContent = `${t} owner sheet${t === 1 ? '' : 's'} · ${S.book.pageCount} page${S.book.pageCount === 1 ? '' : 's'}`;
   } else if (S.view === 'draft' && S.draft) {
     S.book = buildDraftSheet(S.draft, S.settings, { ratingOf, spread: teamSpread(S.draft) });
     $('#page-count').textContent = `${S.draft.length} teams · ${S.players.length} players`;
@@ -454,13 +511,7 @@ function render() {
   }
   $('#preview').innerHTML = S.book.html;
 
-  let ps = document.getElementById('print-style');
-  if (!ps) {
-    ps = document.createElement('style');
-    ps.id = 'print-style';
-    document.head.appendChild(ps);
-  }
-  ps.textContent = `@page { size: ${S.book.pageSizeCss}; margin: 0; }`;
+  setPrintSize(S.book.pageSizeCss);
   applyZoom();
 
   // These depend on S.players, which only exists once the booklet has been
@@ -562,8 +613,7 @@ function updateCriteriaTotal() {
 
 function showView(view) {
   S.view = view;
-  $('#view-tabs').hidden = false;
-  $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === view));
+  syncTabs();
   render();
 }
 
@@ -1015,8 +1065,14 @@ function bindDraft() {
       $('#panel-draft').open = true;
       return;
     }
+    // Everything but the standalone tools needs a player list behind it.
+    if (!S.rows.length && !STANDALONE_VIEWS.includes(b.dataset.view)) {
+      toast('Load a player list first — panel 1.');
+      $('#panel-data').open = true;
+      return;
+    }
     S.view = b.dataset.view;
-    $$('#view-tabs button').forEach(x => x.classList.toggle('on', x === b));
+    syncTabs();
     render();
   });
 }
@@ -1060,9 +1116,8 @@ function drawTeams() {
     + `<p class="fair">Strongest and weakest squad are <strong>${sp.averageGap}</strong> apart on average rating.
        Shuffle again for a different fair draw.</p>`;
   $('#d-copy').disabled = false;
-  $('#view-tabs').hidden = false;
   S.view = 'draft';
-  $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === 'draft'));
+  syncTabs();
   render();
   toast(`Drew ${S.draft.length} teams.`);
 }

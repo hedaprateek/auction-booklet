@@ -31,6 +31,75 @@
   <!-- ───────────────────────── sidebar ───────────────────────── -->
   <aside class="sidebar" id="sidebar">
 
+    <p class="side-group">Everyday tools <em>· no spreadsheet needed</em></p>
+
+    <details class="panel" id="panel-qr">
+      <summary>QR code sheet</summary>
+      <div class="panel-body">
+        <p class="hint">A sheet of labelled codes — one per form, event or notice. Print, cut along the dashed lines, stick them up.</p>
+        <label class="field">
+          <span>One per line — <code>Label | link | note</code></span>
+          <textarea id="q-list" rows="7" placeholder="Player registration | https://forms.gle/abc123 | Closes 7 March&#10;Quiz entry | https://forms.gle/xyz789&#10;Digital booklet | https://…"></textarea>
+        </label>
+        <p class="hint">A comma works instead of the pipe. A bare domain gets <code>https://</code> added; <code>upi:</code>, <code>tel:</code> and <code>mailto:</code> are left alone.</p>
+        <div class="row2">
+          <label class="field"><span>Layout</span><select id="q-layout"></select></label>
+          <label class="field"><span>Codes</span><input type="text" id="q-count" readonly></label>
+        </div>
+        <label class="check"><input type="checkbox" id="q-showurl" checked> Print the link under each code</label>
+        <label class="check"><input type="checkbox" id="q-heading" checked> Event name across the top</label>
+
+        <div class="divider"></div>
+        <p class="hint"><strong>Entry-fee code.</strong> Fill these in and it adds a UPI line that opens any payment app.</p>
+        <div class="row2">
+          <label class="field"><span>UPI ID</span><input type="text" id="q-upi" placeholder="club@okbank"></label>
+          <label class="field"><span>Amount</span><input type="text" id="q-amt" placeholder="500"></label>
+        </div>
+        <label class="field"><span>Payee name</span><input type="text" id="q-payee" placeholder="Riverside Sports Club"></label>
+        <button id="q-addupi" class="btn btn-block">Add the payment code</button>
+
+        <div class="divider"></div>
+        <button id="q-show" class="btn btn-primary btn-block">Show the QR sheet</button>
+        <p class="hint">Codes are drawn as vector, so they stay sharp at any size and scan cleanly off paper.</p>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-form">
+      <summary>Google Form builder</summary>
+      <div class="panel-body">
+        <p class="hint">Build the Google Form that collects your players. AuctionBook writes a script; Google creates the form in your own Drive. Nothing passes through us, and the questions are worded so the responses load back with no remapping.</p>
+        <label class="field"><span>Form title</span><input type="text" id="f-title" placeholder="Riverside Premier League — Player Registration"></label>
+        <label class="field"><span>Auction date &amp; venue</span><input type="text" id="f-event" placeholder="Sunday 14 March, Riverside Ground"></label>
+        <div class="row2">
+          <label class="field"><span>Entry fee</span><input type="text" id="f-fee" placeholder="₹500"></label>
+          <label class="field"><span>Registration closes</span><input type="text" id="f-closes" placeholder="7 March"></label>
+        </div>
+        <label class="field"><span>Categories <em>(one per line)</em></span><textarea id="f-cats" rows="4"></textarea></label>
+        <label class="field"><span>Base price options <em>(one per line)</em></span><textarea id="f-bands" rows="3"></textarea></label>
+        <label class="field"><span>Stat questions <em>(one per line)</em></span><textarea id="f-stats" rows="4"></textarea></label>
+        <label class="field"><span>Extra details <em>(one per line)</em></span><textarea id="f-subs" rows="2"></textarea></label>
+        <label class="check"><input type="checkbox" id="f-phone" checked> Ask for a mobile number <em>&nbsp;(never printed)</em></label>
+        <label class="check"><input type="checkbox" id="f-photo" checked> Ask for a photo</label>
+        <label class="check"><input type="checkbox" id="f-note" checked> Ask “anything owners should know?”</label>
+        <label class="check"><input type="checkbox" id="f-email" checked> Collect email addresses</label>
+        <label class="check"><input type="checkbox" id="f-limit"> Limit to one response per person</label>
+
+        <div class="divider"></div>
+        <button id="f-copy" class="btn btn-primary btn-block">Copy the script</button>
+        <button id="f-download" class="btn btn-block">Download <code>.gs</code> file</button>
+        <button id="f-list" class="btn btn-block">Copy a plain question list</button>
+        <ol class="howto">
+          <li>Open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> → <strong>New project</strong>.</li>
+          <li>Delete what's there, paste the script, press <strong>Run</strong>.</li>
+          <li>Approve the permission prompt — it's asking to make a form in <em>your</em> Drive.</li>
+          <li>Open <strong>View → Logs</strong> for the link to send your players.</li>
+        </ol>
+        <p class="hint">Prefer clicking it together by hand? Use the plain question list instead. Either way, see the <a href="https://github.com/hedaprateek/auction-booklet/blob/main/docs/GOOGLE-FORMS.md" target="_blank" rel="noopener">full guide</a> — especially the bit about getting photos out of Drive.</p>
+      </div>
+    </details>
+
+    <p class="side-group">Auction &amp; booklet</p>
+
     <details class="panel" open id="panel-data">
       <summary>1 · Player data</summary>
       <div class="panel-body">
@@ -168,11 +237,18 @@
         </div>
         <label class="field"><span>Lowest base price</span><input type="text" id="s-minbase" placeholder="10000"></label>
         <p class="hint">Used to work out what an owner can still bid: their balance minus the money they must keep back to fill the rest of their squad.</p>
-        <label class="check"><input type="checkbox" id="s-packall" checked> Include an all-teams tracker in each pack</label>
-        <label class="check"><input type="checkbox" id="s-packlog" checked> Include a sale log (who went to whom)</label>
-        <label class="check"><input type="checkbox" id="s-packunsold" checked> Include an unsold register</label>
-        <p class="hint">Owners watch every purse, not just their own — a rival running out of money changes what you should bid.</p>
-        <button id="btn-ownerpack" class="btn btn-primary btn-block">Show team owner packs</button>
+        <label class="field"><span>Owner sheets</span>
+          <select id="s-packstyle">
+            <option value="single">One sheet each — own team and the rest</option>
+            <option value="full">Full pack — a page per purpose</option>
+          </select>
+        </label>
+        <p class="hint">The single sheet has the owner's own purchases and running balance down one side, and every other team down the other. One side of A4, per owner.</p>
+        <label class="check"><input type="checkbox" id="s-packall"> Include an all-teams tracker in each pack</label>
+        <label class="check"><input type="checkbox" id="s-packlog"> Include a sale log (who went to whom)</label>
+        <label class="check"><input type="checkbox" id="s-packunsold"> Include an unsold register</label>
+        <p class="hint">Only used by the full pack. The single sheet already covers every team.</p>
+        <button id="btn-ownerpack" class="btn btn-primary btn-block">Show owner sheets</button>
         <button id="btn-ownerbook" class="btn btn-block">Download bidding tracker <code>.xlsx</code></button>
         <p class="hint">A pack per owner: purse plan, a bid-by-bid ladder of what they can afford, a squad checklist and a ledger to write purchases into. The workbook does the same arithmetic live.</p>
 
@@ -255,73 +331,8 @@
       </div>
     </details>
 
-    <details class="panel" id="panel-form">
-      <summary>8 · Registration form</summary>
-      <div class="panel-body">
-        <p class="hint">Build the Google Form that collects your players. AuctionBook writes a script; Google creates the form in your own Drive. Nothing passes through us, and the questions are worded so the responses load back with no remapping.</p>
-        <label class="field"><span>Form title</span><input type="text" id="f-title" placeholder="Riverside Premier League — Player Registration"></label>
-        <label class="field"><span>Auction date &amp; venue</span><input type="text" id="f-event" placeholder="Sunday 14 March, Riverside Ground"></label>
-        <div class="row2">
-          <label class="field"><span>Entry fee</span><input type="text" id="f-fee" placeholder="₹500"></label>
-          <label class="field"><span>Registration closes</span><input type="text" id="f-closes" placeholder="7 March"></label>
-        </div>
-        <label class="field"><span>Categories <em>(one per line)</em></span><textarea id="f-cats" rows="4"></textarea></label>
-        <label class="field"><span>Base price options <em>(one per line)</em></span><textarea id="f-bands" rows="3"></textarea></label>
-        <label class="field"><span>Stat questions <em>(one per line)</em></span><textarea id="f-stats" rows="4"></textarea></label>
-        <label class="field"><span>Extra details <em>(one per line)</em></span><textarea id="f-subs" rows="2"></textarea></label>
-        <label class="check"><input type="checkbox" id="f-phone" checked> Ask for a mobile number <em>&nbsp;(never printed)</em></label>
-        <label class="check"><input type="checkbox" id="f-photo" checked> Ask for a photo</label>
-        <label class="check"><input type="checkbox" id="f-note" checked> Ask “anything owners should know?”</label>
-        <label class="check"><input type="checkbox" id="f-email" checked> Collect email addresses</label>
-        <label class="check"><input type="checkbox" id="f-limit"> Limit to one response per person</label>
-
-        <div class="divider"></div>
-        <button id="f-copy" class="btn btn-primary btn-block">Copy the script</button>
-        <button id="f-download" class="btn btn-block">Download <code>.gs</code> file</button>
-        <button id="f-list" class="btn btn-block">Copy a plain question list</button>
-        <ol class="howto">
-          <li>Open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> → <strong>New project</strong>.</li>
-          <li>Delete what's there, paste the script, press <strong>Run</strong>.</li>
-          <li>Approve the permission prompt — it's asking to make a form in <em>your</em> Drive.</li>
-          <li>Open <strong>View → Logs</strong> for the link to send your players.</li>
-        </ol>
-        <p class="hint">Prefer clicking it together by hand? Use the plain question list instead. Either way, see the <a href="https://github.com/hedaprateek/auction-booklet/blob/main/docs/GOOGLE-FORMS.md" target="_blank" rel="noopener">full guide</a> — especially the bit about getting photos out of Drive.</p>
-      </div>
-    </details>
-
-    <details class="panel" id="panel-qr">
-      <summary>9 · QR codes</summary>
-      <div class="panel-body">
-        <p class="hint">A sheet of labelled codes — one per form, event or notice. Print, cut along the dashed lines, stick them up.</p>
-        <label class="field">
-          <span>One per line — <code>Label | link | note</code></span>
-          <textarea id="q-list" rows="7" placeholder="Player registration | https://forms.gle/abc123 | Closes 7 March&#10;Quiz entry | https://forms.gle/xyz789&#10;Digital booklet | https://…"></textarea>
-        </label>
-        <p class="hint">A comma works instead of the pipe. A bare domain gets <code>https://</code> added; <code>upi:</code>, <code>tel:</code> and <code>mailto:</code> are left alone.</p>
-        <div class="row2">
-          <label class="field"><span>Layout</span><select id="q-layout"></select></label>
-          <label class="field"><span>Codes</span><input type="text" id="q-count" readonly></label>
-        </div>
-        <label class="check"><input type="checkbox" id="q-showurl" checked> Print the link under each code</label>
-        <label class="check"><input type="checkbox" id="q-heading" checked> Event name across the top</label>
-
-        <div class="divider"></div>
-        <p class="hint"><strong>Entry-fee code.</strong> Fill these in and it adds a UPI line that opens any payment app.</p>
-        <div class="row2">
-          <label class="field"><span>UPI ID</span><input type="text" id="q-upi" placeholder="club@okbank"></label>
-          <label class="field"><span>Amount</span><input type="text" id="q-amt" placeholder="500"></label>
-        </div>
-        <label class="field"><span>Payee name</span><input type="text" id="q-payee" placeholder="Riverside Sports Club"></label>
-        <button id="q-addupi" class="btn btn-block">Add the payment code</button>
-
-        <div class="divider"></div>
-        <button id="q-show" class="btn btn-primary btn-block">Show the QR sheet</button>
-        <p class="hint">Codes are drawn as vector, so they stay sharp at any size and scan cleanly off paper.</p>
-      </div>
-    </details>
-
     <details class="panel" id="panel-flex">
-      <summary>10 · Flex banner</summary>
+      <summary>8 · Flex banner</summary>
       <div class="panel-body">
         <p class="hint">Artwork for the vinyl banner on the society gate. Laid out at real size and printed to PDF, which is what a flex shop wants.</p>
         <div class="row2">
@@ -356,7 +367,7 @@
     </details>
 
     <details class="panel" id="panel-share">
-      <summary>11 · Share</summary>
+      <summary>9 · Share</summary>
       <div class="panel-body">
         <label class="field">
           <span>Link for the cover QR code</span>
@@ -386,7 +397,7 @@
   <!-- ───────────────────────── preview ───────────────────────── -->
   <section class="preview-wrap">
     <div class="preview-bar">
-      <div class="view-tabs" id="view-tabs" hidden>
+      <div class="view-tabs" id="view-tabs">
         <button data-view="booklet" class="on">Booklet</button>
         <button data-view="draft">Teams</button>
         <button data-view="judge">Judging</button>
@@ -409,6 +420,8 @@
         <h2>Build an auction booklet from a spreadsheet</h2>
         <p>Load your player list on the left. Any column you don't map becomes a stat on the player's card — so the same tool works for cricket, football, kabaddi, volleyball, or anything else.</p>
         <button class="btn btn-primary" id="btn-load-sample-2">Try it with demo data</button>
+        <p class="empty-alt">No spreadsheet? The <button type="button" class="linkish" id="btn-go-qr">QR code sheet</button>
+          and the <button type="button" class="linkish" id="btn-go-form">Google Form builder</button> work on their own.</p>
       </div>
       <div id="preview" class="preview"></div>
       <div id="console" class="con" hidden>

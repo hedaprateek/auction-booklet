@@ -32,6 +32,90 @@ export const reserveFor = (slots, minBase) => Math.max(0, slots - 1) * minBase;
 export const maxBid = (balance, slots, minBase) =>
   Math.max(0, balance - reserveFor(slots, minBase));
 
+/* ── the one sheet ──────────────────────────────────────────────────────── */
+
+/**
+ * Everything an owner needs on a single side of A4: their own purchases with a
+ * running balance down the left, and every other team's down the right, because
+ * a rival running out of money changes what you should bid.
+ *
+ * This is the default. The multi-page pack below still exists for anyone who
+ * wants a sheet per purpose, but one page is what actually gets carried to a
+ * table and written on.
+ */
+export function buildOwnerSheet(settings, { teamLogos = new Map() } = {}) {
+  const size = PAGE_SIZES[settings.pageSize] || PAGE_SIZES.a4;
+  const teams = parseTeams(settings.teamsText);
+  const list = teams.length ? teams : [{ name: 'Team', purse: '' }];
+  const minSquad = Math.max(1, Number(settings.minSquad) || 11);
+  const maxSquad = Math.max(minSquad, Number(settings.maxSquad) || minSquad + 3);
+  const minBase = Math.max(0, num(settings.minBase));
+  const money = v => formatMoney(v, settings.currency, settings.numberFormat);
+
+  const pages = list.map(team => {
+    const purse = num(team.purse);
+    const others = list.filter(t => t.name !== team.name);
+    // A row per squad slot; the rows then stretch to fill the page.
+    const mine = Math.min(Math.max(maxSquad, 11), 20);
+    // Past four rivals a single row of columns gets too narrow to write a name
+    // in, so they wrap onto two shorter rows instead — and fewer rows fit.
+    const wrapped = others.length > 4;
+    const cols = wrapped ? Math.ceil(others.length / 2) : (others.length || 1);
+    const theirs = wrapped ? Math.min(mine, 10) : mine;
+
+    return page('owner-one', `
+      ${ownerHead(team, teamLogos.get(normalizeKey(team.name)), settings, money, purse)}
+      <div class="one-rule">
+        Squad ${minSquad}–${maxSquad} · lowest base ${esc(minBase ? money(minBase) : '—')} ·
+        <strong>max bid = balance − (slots still to fill − 1) × lowest base</strong>
+      </div>
+      <div class="one-cols">
+        <section class="one-mine">
+          <h3>My squad</h3>
+          <table class="one-t">
+            <thead><tr><th class="c-n">#</th><th>Player</th>
+              <th class="c-m">Price</th><th class="c-m">Balance</th></tr></thead>
+            <tbody>
+              <tr class="one-open"><td class="c-n"></td><td>Opening purse</td>
+                <td class="c-m"></td><td class="c-m v">${esc(purse ? money(purse) : '')}</td></tr>
+              ${Array.from({ length: mine }, (_, i) => `<tr>
+                <td class="c-n">${i + 1}</td><td></td><td class="c-m"></td><td class="c-m"></td>
+              </tr>`).join('')}
+              <tr class="one-tot"><td class="c-n"></td><td class="lbl">Spent</td>
+                <td class="c-m"></td><td class="c-m lbl">Left</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="one-others">
+          <h3>Other teams</h3>
+          <div class="one-grid" style="--n:${cols}">
+            ${others.map(t => `<div class="one-team">
+              <div class="one-team-n">${esc(t.name)}</div>
+              <div class="one-team-p">${t.purse ? esc(money(num(t.purse))) : '—'}</div>
+              <table class="one-mini">
+                <thead><tr><th>Player</th><th class="c-m">Price</th></tr></thead>
+                <tbody>${Array.from({ length: theirs }, () =>
+                  '<tr><td></td><td class="c-m"></td></tr>').join('')}
+                  <tr class="one-tot"><td class="lbl">Left</td><td class="c-m"></td></tr>
+                </tbody>
+              </table>
+            </div>`).join('')}
+          </div>
+        </section>
+      </div>
+      ${ownerFoot(settings)}
+    `);
+  });
+
+  const style = `--accent:${cssColor(settings.accent)};--pw:${size.w};--ph:${size.h}`;
+  return {
+    html: `<div class="bk" data-theme="${esc(settings.theme || 'classic')}" style="${style}">${pages.join('')}</div>`,
+    pageCount: pages.length,
+    pageSizeCss: size.css,
+  };
+}
+
 /* ── printed pack ───────────────────────────────────────────────────────── */
 
 export function buildOwnerPacks(settings, { teamLogos = new Map(), categories = [] } = {}) {

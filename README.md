@@ -110,7 +110,7 @@ Note that anyone with the link can read it, so treat it like a public document.
 
 ## QR codes
 
-A club running an auction is usually running six other things at once. Panel 9 prints a sheet of labelled codes — one per form, event or notice — with dashed cut lines.
+A general tool — it needs no player list, no spreadsheet, nothing but links. It sits at the top of the sidebar under **Everyday tools** and prints a sheet of labelled codes with dashed cut lines: one per form, event, notice or payment.
 
 One entry per line:
 
@@ -178,7 +178,11 @@ Keyboard, because an auctioneer works at speaking pace:
 
 ## Documents for team owners
 
-The booklet tells owners who is up for auction. It does not help them bid. Panel 4 produces a pack for each team:
+The booklet tells owners who is up for auction. It does not help them bid.
+
+**One sheet each — the default.** Panel 4 prints a single page per team. The left half is their own squad: numbered rows for player, price paid and the balance after it, opening with their purse already filled in and closing on Spent and Left. The right half is every rival, one narrow column each, so an owner tracks the whole room from the page in front of them without shuffling paper. The rule that governs the bid runs along the top. One page, one owner, nothing to collate.
+
+Switch **Owner documents** to **Full pack** and you get a page per purpose instead:
 
 **A purse plan.** Total points, squad minimum and maximum, average per player, and a ladder showing what they can spend on one player against how many squad slots they still have to fill.
 
@@ -192,7 +196,7 @@ The booklet tells owners who is up for auction. It does not help them bid. Panel
 
 **An unsold register.** The pile that comes back round, with a tick box and room for what they finally went for.
 
-Each of the three can be switched off in panel 4 if you would rather print less.
+Each of the last three can be switched off if you would rather print less.
 
 **A bidding tracker** (`.xlsx`, one tab per team). The owner types the price they paid; spent, balance, slots left and max bid update themselves. An *All teams* tab shows every purse at once.
 
@@ -246,7 +250,7 @@ Results print on the same paper as the booklet, or copy straight into WhatsApp.
 
 How it works: a greedy pass hands out the strongest players first, per category, to whoever needs them most; then a local search swaps same-category pairs between teams while that flattens the totals. Draws are seeded, so the same seed always reproduces the same teams.
 
-## Building the registration form
+## Building a Google Form
 
 Panel 6 writes the Google Form for you.
 
