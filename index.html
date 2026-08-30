@@ -289,8 +289,39 @@
       </div>
     </details>
 
+    <details class="panel" id="panel-qr">
+      <summary>9 · QR codes</summary>
+      <div class="panel-body">
+        <p class="hint">A sheet of labelled codes — one per form, event or notice. Print, cut along the dashed lines, stick them up.</p>
+        <label class="field">
+          <span>One per line — <code>Label | link | note</code></span>
+          <textarea id="q-list" rows="7" placeholder="Player registration | https://forms.gle/abc123 | Closes 7 March&#10;Quiz entry | https://forms.gle/xyz789&#10;Digital booklet | https://…"></textarea>
+        </label>
+        <p class="hint">A comma works instead of the pipe. A bare domain gets <code>https://</code> added; <code>upi:</code>, <code>tel:</code> and <code>mailto:</code> are left alone.</p>
+        <div class="row2">
+          <label class="field"><span>Layout</span><select id="q-layout"></select></label>
+          <label class="field"><span>Codes</span><input type="text" id="q-count" readonly></label>
+        </div>
+        <label class="check"><input type="checkbox" id="q-showurl" checked> Print the link under each code</label>
+        <label class="check"><input type="checkbox" id="q-heading" checked> Event name across the top</label>
+
+        <div class="divider"></div>
+        <p class="hint"><strong>Entry-fee code.</strong> Fill these in and it adds a UPI line that opens any payment app.</p>
+        <div class="row2">
+          <label class="field"><span>UPI ID</span><input type="text" id="q-upi" placeholder="club@okbank"></label>
+          <label class="field"><span>Amount</span><input type="text" id="q-amt" placeholder="500"></label>
+        </div>
+        <label class="field"><span>Payee name</span><input type="text" id="q-payee" placeholder="Riverside Sports Club"></label>
+        <button id="q-addupi" class="btn btn-block">Add the payment code</button>
+
+        <div class="divider"></div>
+        <button id="q-show" class="btn btn-primary btn-block">Show the QR sheet</button>
+        <p class="hint">Codes are drawn as vector, so they stay sharp at any size and scan cleanly off paper.</p>
+      </div>
+    </details>
+
     <details class="panel" id="panel-flex">
-      <summary>9 · Flex banner</summary>
+      <summary>10 · Flex banner</summary>
       <div class="panel-body">
         <p class="hint">Artwork for the vinyl banner on the society gate. Laid out at real size and printed to PDF, which is what a flex shop wants.</p>
         <div class="row2">
@@ -325,7 +356,7 @@
     </details>
 
     <details class="panel" id="panel-share">
-      <summary>10 · Share</summary>
+      <summary>11 · Share</summary>
       <div class="panel-body">
         <label class="field">
           <span>Link for the cover QR code</span>
@@ -363,6 +394,7 @@
         <button data-view="owners">Owners</button>
         <button data-view="auction">Run auction</button>
         <button data-view="flex">Flex banner</button>
+        <button data-view="qr">QR codes</button>
       </div>
       <span id="page-count" class="muted">No booklet yet</span>
       <div class="zoom">

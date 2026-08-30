@@ -18,6 +18,7 @@ Load an Excel or CSV file and AuctionBook gives you:
 - **A QR code on the cover**, so anyone holding a paper copy can pull up the digital one.
 - **Balanced teams without an auction** — rate the players and it draws squads of near-equal strength.
 - **The registration form itself** — it writes the Google Form that collects your players.
+- **QR code sheets** — one per form, event or notice, including a UPI entry-fee code.
 - **Flex banners for the society gate** — laid out at true print size and exported as PDF for the flex shop.
 - **A console that runs the auction** — one lot at a time, bids, and teams that physically cannot overbid.
 - **Judged competitions too** — cooking, rangoli, dance, fancy dress and more, with printable judge score sheets, a scoring workbook that ranks itself, and certificates.
@@ -106,6 +107,24 @@ git add docs/booklets && git commit -m "Add auction booklet" && git push
 It'll be live at `https://<your-username>.github.io/<repo>/booklets/my-league.html`.
 
 Note that anyone with the link can read it, so treat it like a public document.
+
+## QR codes
+
+A club running an auction is usually running six other things at once. Panel 9 prints a sheet of labelled codes — one per form, event or notice — with dashed cut lines.
+
+One entry per line:
+
+```
+Player registration | https://forms.gle/abc123 | Closes 7 March
+Quiz entry, forms.gle/xyz789
+Digital booklet | https://myclub.example/booklet.html
+```
+
+A comma works instead of the pipe, and the third field is an optional note printed under the code. A bare domain gets `https://` added — a code holding `forms.gle/x` scans as plain text and opens nothing. Schemes you type yourself (`upi:`, `tel:`, `mailto:`, `whatsapp:`) are left exactly as they are.
+
+**Entry-fee code.** Enter your UPI ID, amount and payee name and it adds a `upi://pay` line that opens any payment app with the amount already filled in. The sheet prints it as *UPI · club@okbank* rather than a wall of query string.
+
+Four layouts: 4, 6 or 9 to a page, or one per page as a poster. Codes are inline SVG, so they stay sharp at any size and scan cleanly off paper.
 
 ## Flex banners
 
@@ -318,6 +337,7 @@ node scripts/make-sample.mjs   # regenerates the sample spreadsheet
 | `assets/js/ownerpack.js` | Team owner purse plans, ledgers and bidding tracker |
 | `assets/js/auctioneer.js` | The console that runs the auction |
 | `assets/js/flex.js` | Flex banner artwork at true print size |
+| `assets/js/qrsheet.js` | Sheets of labelled QR codes |
 | `assets/js/formbuilder.js` | Generates the Google Form script |
 | `sw.js` | Offline cache |
 | `assets/js/main.js` | Wires up the UI |

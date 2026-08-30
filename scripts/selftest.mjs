@@ -589,6 +589,59 @@ console.log('\nAuctioneer console');
   check('opening bid follows the base price', A.openingBid(pool[0], st) === 10000);
 }
 
+console.log('\nQR code sheets');
+{
+  const Q = await import('../assets/js/qrsheet.js');
+
+  const list = Q.parseQrList([
+    'Player registration | https://forms.gle/abc | Closes 7 March',
+    'Quiz entry, forms.gle/xyz',
+    'WhatsApp group | https://chat.whatsapp.com/K1',
+    '   ',
+  ].join('\n'));
+  check('parses a pipe line with a note',
+    list[0].label === 'Player registration' && list[0].note === 'Closes 7 March');
+  check('a comma works instead of a pipe', list[1].label === 'Quiz entry', list[1]?.label);
+  check('a bare domain gets https', list[1].url === 'https://forms.gle/xyz', list[1]?.url);
+  check('blank lines are dropped', list.length === 3, String(list.length));
+
+  // A code holding "forms.gle/x" scans as text and opens nothing.
+  check('leaves upi: alone', Q.normaliseTarget('upi://pay?pa=a@b') === 'upi://pay?pa=a@b');
+  check('leaves tel: alone', Q.normaliseTarget('tel:+919812345678') === 'tel:+919812345678');
+  check('leaves https alone', Q.normaliseTarget('https://x.example') === 'https://x.example');
+  check('leaves plain words alone', Q.normaliseTarget('Ask at the desk') === 'Ask at the desk');
+
+  const upi = Q.upiUri({ pa: 'club@okbank', pn: 'Riverside Club', am: '500', tn: 'Entry' });
+  check('builds a upi link', upi.startsWith('upi://pay?') && upi.includes('cu=INR'), upi);
+  check('upi escapes the payee', upi.includes('pn=Riverside+Club') || upi.includes('pn=Riverside%20Club'), upi);
+  check('upi carries the amount', /[?&]am=500\b/.test(upi));
+  check('reads back as UPI, not a raw url', Q.prettyTarget(upi) === 'UPI · club@okbank', Q.prettyTarget(upi));
+  check('trims a very long url', Q.prettyTarget('https://x.example/' + 'a'.repeat(80)).endsWith('…'));
+
+  const st = { ...SAMPLE.settings, theme: 'classic', pageSize: 'a4', accent: '#166534' };
+  const four = Q.buildQrSheet(list, { ...st, qrLayout: 'grid4' });
+  check('one page holds four codes', four.pageCount === 1 && four.count === 3);
+  check('every code is drawn as svg', (four.html.match(/<svg class="qr"/g) || []).length === 3);
+  check('labels are printed', four.html.includes('Player registration'));
+  check('notes are printed', four.html.includes('Closes 7 March'));
+
+  const many = Array.from({ length: 10 }, (_, i) =>
+    ({ label: 'Form ' + i, url: 'https://x.example/' + i, note: '' }));
+  check('ten codes spill onto three sheets at 4-up',
+    Q.buildQrSheet(many, { ...st, qrLayout: 'grid4' }).pageCount === 3);
+  check('nine to a page fits one sheet',
+    Q.buildQrSheet(many.slice(0, 9), { ...st, qrLayout: 'grid9' }).pageCount === 1);
+  check('a poster is one code per page',
+    Q.buildQrSheet(many.slice(0, 3), { ...st, qrLayout: 'poster' }).pageCount === 3);
+  check('the link can be hidden',
+    !Q.buildQrSheet(list, { ...st, qrShowUrl: false }).html.includes('qs-url'));
+  check('an empty list still builds a page',
+    Q.buildQrSheet([], st).pageCount === 1 && Q.buildQrSheet([], st).count === 0);
+  check('a label with markup is escaped',
+    !Q.buildQrSheet([{ label: '<script>x</script>', url: 'https://a.example' }], st)
+      .html.includes('<script>x'));
+}
+
 console.log('\nOffline cache');
 {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));

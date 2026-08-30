@@ -8,6 +8,7 @@ import { buildJudgeSheets, buildCertificates, buildScoringWorkbook, buildBlankTe
 import { buildOwnerPacks, buildOwnerWorkbook } from './ownerpack.js';
 import * as A from './auctioneer.js';
 import { FLEX_SIZES, FLEX_TEMPLATES, buildFlex, squadFor, teamNames, teamLogoFor } from './flex.js';
+import { QR_LAYOUTS, parseQrList, buildQrSheet, upiUri } from './qrsheet.js';
 import { createAuction } from './auctioneer.js';
 import { normalize, buildBook, buildDraftSheet, parseTeams } from './render.js';
 import { buildPhotoIndex, resizeToDataURL, normalizeKey } from './images.js';
@@ -34,6 +35,7 @@ const DEFAULTS = {
   judges: '', noun: '', criteria: null,
   minSquad: 11, maxSquad: 14, minBase: '',
   packAllTeams: true, packSaleLog: true, packUnsold: true, packLogPages: 2,
+  qrList: '', qrLayout: 'grid4', qrShowUrl: true, qrHeading: true,
 };
 
 const S = {
@@ -81,6 +83,7 @@ function boot() {
   bindOwners();
   bindAuction();
   bindFlex();
+  bindQr();
   bindForm();
   registerServiceWorker();
   window.addEventListener('resize', () => { if (S.zoom === 'fit') applyZoom(); });
@@ -418,7 +421,12 @@ function render() {
     return;
   }
 
-  if (S.view === 'flex') {
+  if (S.view === 'qr') {
+    const sheet = buildQrSheet(parseQrList(S.settings.qrList), S.settings);
+    S.book = sheet;
+    $('#page-count').textContent =
+      `${sheet.count} QR code${sheet.count === 1 ? '' : 's'} · ${sheet.pageCount} page${sheet.pageCount === 1 ? '' : 's'}`;
+  } else if (S.view === 'flex') {
     const cfg = flexConfig();
     const f = buildFlex(cfg, flexContext(cfg));
     S.book = { html: f.html, pageCount: 1, pageSizeCss: f.pageSizeCss };
@@ -557,6 +565,54 @@ function showView(view) {
   $('#view-tabs').hidden = false;
   $$('#view-tabs button').forEach(x => x.classList.toggle('on', x.dataset.view === view));
   render();
+}
+
+/* ── QR code sheets ─────────────────────────────────────────────────────── */
+
+function bindQr() {
+  $('#q-layout').innerHTML = QR_LAYOUTS.map(l =>
+    `<option value="${l.id}">${esc(l.label)}</option>`).join('');
+
+  const live = () => {
+    S.settings.qrList = $('#q-list').value;
+    S.settings.qrLayout = $('#q-layout').value;
+    S.settings.qrShowUrl = $('#q-showurl').checked;
+    S.settings.qrHeading = $('#q-heading').checked;
+    persistSettings();
+    const n = parseQrList(S.settings.qrList).filter(i => i.url).length;
+    $('#q-count').value = n ? `${n} code${n === 1 ? '' : 's'}` : 'none yet';
+    if (S.view === 'qr') render();
+  };
+  ['#q-list', '#q-layout', '#q-showurl', '#q-heading']
+    .forEach(sel => $(sel).addEventListener('input', live));
+
+  $('#q-addupi').addEventListener('click', () => {
+    const pa = $('#q-upi').value.trim();
+    if (!pa) return toast('Enter the UPI ID first — the one that receives the money.', 'error');
+    const uri = upiUri({
+      pa,
+      pn: $('#q-payee').value.trim() || S.settings.title,
+      am: $('#q-amt').value.trim(),
+      tn: S.settings.title ? `${S.settings.title} entry` : '',
+    });
+    const amt = $('#q-amt').value.trim();
+    const line = `Entry fee${amt ? ` ${S.settings.currency || ''}${amt}` : ''} | ${uri} | Scan with any UPI app`;
+    const box = $('#q-list');
+    box.value = (box.value.trim() ? box.value.replace(/\s*$/, '\n') : '') + line + '\n';
+    live();
+    toast('Payment code added to the list.');
+  });
+
+  $('#q-show').addEventListener('click', () => {
+    if (!parseQrList($('#q-list').value).filter(i => i.url).length) {
+      return toast('Add at least one line — a label and a link.', 'error');
+    }
+    showView('qr');
+  });
+
+  // Seed something useful rather than an empty box.
+  if (!$('#q-list').value && S.settings.qrList) $('#q-list').value = S.settings.qrList;
+  live();
 }
 
 /* ── flex banner ────────────────────────────────────────────────────────── */
