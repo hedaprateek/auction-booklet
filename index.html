@@ -10,6 +10,25 @@
 <meta name="theme-color" content="#c2410c">
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/booklet.css">
+<style>
+.sc-link{
+  position:relative;margin-left:4px;padding-left:17px;
+  text-transform:none;letter-spacing:.02em;white-space:nowrap;
+  color:inherit;text-decoration:none;opacity:.78;
+  border-bottom:1px solid transparent;
+  transition:opacity .18s ease,border-color .18s ease;
+}
+.sc-link::before{content:"";position:absolute;left:0;top:50%;
+  width:9px;height:1px;background:currentColor;opacity:.5}
+.sc-link:hover{opacity:1;border-bottom-color:currentColor}
+.sc-link:focus-visible{outline:1px solid currentColor;outline-offset:3px;
+  border-radius:2px;opacity:1}
+@media (max-width:460px){
+  .sc-link{white-space:normal;margin-left:0;padding-left:0}
+  .sc-link::before{display:none}
+}
+@media print{ .sc-link{display:none!important} }
+</style>
 </head>
 <body>
 
@@ -390,7 +409,7 @@
 
     <footer class="sidebar-foot">
       <a href="https://github.com/hedaprateek/auction-booklet" target="_blank" rel="noopener">Source on GitHub</a>
-      <span class="foot-brand">Stunity tech - by Prateek</span>
+      <span class="foot-brand">Stunity Tech — by Prateek <a class="sc-link" href="https://stunity-tech.hedaprateek.workers.dev" target="_blank" rel="noopener">stunity-tech.hedaprateek.workers.dev</a></span>
     </footer>
   </aside>
 
